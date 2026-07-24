@@ -70,7 +70,7 @@ This repo is not limited to AI/ML — it's meant for **any Computer Science or r
 
 1. Create a self-contained `.html` file in the repo root.
 2. Keep all CSS and JS inline (no CDN dependencies when avoidable).
-3. Add the **verification badge** snippet immediately after `<body>`, with `data-verified="false"` and `data-author="<github-user>"` (see below). Every new widget starts unverified.
+3. Add the **corner-controls** snippet immediately after `<body>` — the back-to-index link plus the verification badge (see "Back Button" and "Human-Expert Verification" below), with `data-verified="false"` and `data-author="<github-user>"`. Every new widget starts unverified.
 4. Add a row to the table of contents in `README.md` with the GitHub Pages URL, a concise description (3 lines max, 70–100 words), an Author cell (`[@user](https://github.com/user)`), and a `⚠️ AI-only` Status cell.
 5. Add a card to `index.html` inside the `#grid` div, following the existing card pattern (`data-verified="false"` and `data-author="<github-user>"` on the `<a class="card">`, tags, title, desc, `<span class="verify-badge"></span>`, `<div class="card-author">by @user</div>`, arrow link). Use the same concise description.
 6. Commit and push — GitHub Pages deploys automatically.
@@ -85,6 +85,35 @@ Every widget credits its creator by **GitHub username** — the user whose commi
 - **`index.html`** — `data-author` on the card's `<a>` plus a `<div class="card-author">by @user</div>` line; a delegated click handler on `#grid` opens `https://github.com/<user>` (the card is itself an `<a>`, so the credit cannot be a nested link).
 - **`README.md`** — the Author column: `[@user](https://github.com/user)`.
 
+## Back Button
+
+Every widget links back to the gallery via a small pill in the top-right corner, right next to the verification badge, so a reader never has to hit the browser back button to get back to `index.html`. It lives inside the same `.corner-controls` wrapper as the badge:
+
+```html
+<div class="corner-controls">
+  <a href="index.html" class="back-to-index">&larr; Back to index</a>
+  <div class="verify-badge" data-verified="false" data-author="mtgca"></div>
+</div>
+<style>
+.corner-controls{position:fixed;top:10px;right:10px;z-index:9999;
+  display:flex;align-items:center;gap:8px;}
+.back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;
+  border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);transition:border-color .15s ease,color .15s ease;}
+.back-to-index:hover{border-color:#4f7df3;color:#4f7df3;}
+.verify-badge{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:6px 12px;border-radius:999px;display:flex;align-items:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap;}
+/* ...remaining .verify-badge[data-verified=...] rules unchanged, see Human-Expert Verification */
+</style>
+```
+
+- The link is a **relative** `index.html` (all widgets and the index live flat in the repo root), so it works both on GitHub Pages and opened locally via `file://`.
+- `.corner-controls` owns the fixed positioning for the pair; `.verify-badge` no longer sets `position:fixed` itself.
+- If the default `top:10px;right:10px` overlaps a widget's own controls, move the whole wrapper to `top:10px;left:10px` in that file only (mirrors the badge-overlap guidance below) — keep the back button and badge together as a pair, don't split their positioning.
+- Reference implementation: `rnn_unrolling_interactive.html`.
+
 ## Human-Expert Verification
 
 Widgets are AI-generated. A widget is only marked **verified** once a human expert in the field has reviewed it for correctness. Until then it shows an explicit caution label so users take it with a grain of salt.
@@ -93,7 +122,7 @@ Widgets are AI-generated. A widget is only marked **verified** once a human expe
 
 Status is tracked by a single `data-verified` attribute (`"true"` / `"false"`) in three places per widget:
 
-- **Inside the widget** — the `.verify-badge` snippet after `<body>` renders a fixed corner pill: green `✓ Expert-verified` or amber `⚠ AI-generated · not expert-verified`. The badge uses `pointer-events:none`; if it overlaps a widget's own top-right controls, move it to `top:10px;left:10px` in that file only.
+- **Inside the widget** — the `.verify-badge` snippet inside `.corner-controls` after `<body>` renders a fixed corner pill: green `✓ Expert-verified` or amber `⚠ AI-generated · not expert-verified`. The badge uses `pointer-events:none`; if the wrapper overlaps a widget's own top-right controls, move `.corner-controls` to `top:10px;left:10px` in that file only (see "Back Button" above).
 - **`index.html`** — `data-verified` on the card's `<a>` drives the card badge via CSS, and powers the **✓ Verified** filter.
 - **`README.md`** — the Status column cell: `✅ Verified` or `⚠️ AI-only`.
 
