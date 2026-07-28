@@ -10,6 +10,7 @@ Hosted on GitHub Pages: **https://mtgca.github.io/interactive-widgets/**
 
 | Widget | Topic | Author | Status | Description |
 |--------|-------|--------|--------|-------------|
+| [Python Basic Structures: list, tuple & dict](https://mtgca.github.io/interactive-widgets/python_basic_structures_interactive.html) | CS / Python | [@MatePrograIA](https://github.com/MatePrograIA) | ⚠️ AI-only | Drag values into list, tuple, and dict containers to compare order, mutability, key-based access, and common data-science uses. |
 | [LLM Next-Word Prediction](https://mtgca.github.io/interactive-widgets/llmpretraining.html) | AI / LLMs | [@mtgca](https://github.com/mtgca) | ✅ Verified | Visualizes LLM pretraining via next-token prediction over text corpus. |
 | [External Clustering Metrics: ARI & NMI](https://mtgca.github.io/interactive-widgets/external_metrics_interactive.html) | ML / Clustering | [@mtgca](https://github.com/mtgca) | ✅ Verified | Drag-and-drop demo of Adjusted Rand Index and Normalized Mutual Information on cluster assignments. |
 | [GMM Covariance Types](https://mtgca.github.io/interactive-widgets/gmm_covariance_interactive.html) | ML / Clustering | [@mtgca](https://github.com/mtgca) | ✅ Verified | How covariance matrix types (full, tied, diagonal, spherical) shape GMM clusters. |
