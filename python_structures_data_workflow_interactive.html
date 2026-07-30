@@ -487,7 +487,7 @@ etiquetas = ["aprobado" if n >= 80 else "revision" for n in notas]
 
     <div class="card">
       <h2>Prueba tomar datos</h2>
-      <p class="hint">Cambia la estructura y escribe accesos como <code>datos[:2]</code>, <code>datos[0]</code>, <code>datos[0][:2]</code>, <code>datos[0][3]</code> o <code>datos[0]["nota"]</code>.</p>
+      <p class="hint">Cambia la estructura y escribe accesos como <code>datos[:2]</code>, <code>datos[::-1]</code>, <code>datos[0][:2]</code>, <code>datos[0][3]</code> o <code>datos[0]["nota"]</code>.</p>
       <div class="mode-row">
         <button class="mode active" data-access-mode="listRows" onclick="setAccessMode('listRows')">lista de listas</button>
         <button class="mode" data-access-mode="tupleRows" onclick="setAccessMode('tupleRows')">lista de tuplas</button>
@@ -1034,14 +1034,14 @@ function renderAccessPractice(){
   const rows = accessRows();
   if(accessMode === "dictRows"){
     shape.innerHTML = `datos = ${pyAccessValue(rows.slice(0, 2))}`;
-    document.getElementById("accessGuide").textContent = 'datos[:2]          # varias filas\ndatos[0]           # una fila completa como dict\ndatos[0]["nota"]   # una celda por nombre de campo\ndatos[-1]["ciudad"] # campo de la ultima fila';
-    renderAccessExamples(['datos[:2]', 'datos[0]', 'datos[-1]', 'datos[0]["nota"]', 'datos[-1]["ciudad"]']);
+    document.getElementById("accessGuide").textContent = 'datos[:2]           # varias filas\ndatos[::-1]        # todas las filas invertidas\ndatos[0]            # una fila completa como dict\ndatos[0]["nota"]    # una celda por nombre de campo\ndatos[-1]["ciudad"] # campo de la ultima fila';
+    renderAccessExamples(['datos[:2]', 'datos[::-1]', 'datos[0]', 'datos[-1]', 'datos[0]["nota"]', 'datos[-1]["ciudad"]']);
   } else {
     shape.innerHTML = accessMode === "tupleRows"
       ? `datos = ${pyAccessValue(rows.slice(0, 2))}`
       : `datos = ${py(rows.slice(0, 2))}`;
-    document.getElementById("accessGuide").textContent = "datos[:2]      # varias filas\ndatos[0]       # una fila completa\ndatos[0][:2]   # varios campos dentro de una fila\ndatos[0][3]    # una celda dentro de una fila\ndatos[-1]      # ultima fila";
-    renderAccessExamples(["datos[:2]", "datos[0]", "datos[-1]", "datos[0][:2]", "datos[0][3]"]);
+    document.getElementById("accessGuide").textContent = "datos[:2]      # varias filas\ndatos[::-1]   # todas las filas invertidas\ndatos[0]       # una fila completa\ndatos[0][::-1] # fila invertida\ndatos[0][:2]   # varios campos dentro de una fila\ndatos[0][3]    # una celda dentro de una fila\ndatos[-1]      # ultima fila";
+    renderAccessExamples(["datos[:2]", "datos[::-1]", "datos[0]", "datos[-1]", "datos[0][::-1]", "datos[0][:2]", "datos[0][3]"]);
   }
 }
 
@@ -1074,13 +1074,17 @@ function parseAccessExpression(expr){
 function applyAccessToken(value, token){
   if(token.includes(":")){
     if(!Array.isArray(value)) throw new Error("El slicing con : funciona sobre listas o tuplas, no sobre un dict.");
-    const [rawStart, rawEnd] = token.split(":");
+    const parts = token.split(":");
+    if(parts.length > 3) throw new Error("Un slice tiene hasta tres partes: inicio:fin:paso.");
+    const [rawStart = "", rawEnd = "", rawStep = ""] = parts;
     const start = rawStart === "" ? undefined : Number(rawStart);
     const end = rawEnd === "" ? undefined : Number(rawEnd);
-    if((rawStart !== "" && Number.isNaN(start)) || (rawEnd !== "" && Number.isNaN(end))){
-      throw new Error("En un slice usa numeros: datos[:2], datos[1:] o datos[0][1:3].");
+    const step = rawStep === "" ? 1 : Number(rawStep);
+    if((rawStart !== "" && Number.isNaN(start)) || (rawEnd !== "" && Number.isNaN(end)) || (rawStep !== "" && Number.isNaN(step))){
+      throw new Error("En un slice usa numeros: datos[:2], datos[1:] o datos[::-1].");
     }
-    return value.slice(start, end);
+    if(step === 0) throw new Error("El paso del slice no puede ser 0.");
+    return pySlice(value, start, end, step);
   }
   if(/^["'].+["']$/.test(token)){
     const key = token.slice(1, -1);
@@ -1096,6 +1100,39 @@ function applyAccessToken(value, token){
   const fixedIndex = index < 0 ? value.length + index : index;
   if(fixedIndex < 0 || fixedIndex >= value.length) throw new Error("Ese indice esta fuera del rango disponible.");
   return value[fixedIndex];
+}
+
+function normalizeSliceIndex(index, length){
+  if(index === undefined) return undefined;
+  return index < 0 ? length + index : index;
+}
+
+function pySlice(values, start, end, step){
+  if(step === 1){
+    return values.slice(start, end);
+  }
+  const result = [];
+  const length = values.length;
+  let i;
+  let limit;
+  if(step > 0){
+    i = normalizeSliceIndex(start, length);
+    limit = normalizeSliceIndex(end, length);
+    if(i === undefined) i = 0;
+    if(limit === undefined) limit = length;
+    i = Math.max(0, Math.min(length, i));
+    limit = Math.max(0, Math.min(length, limit));
+    for(; i < limit; i += step) result.push(values[i]);
+  } else {
+    i = normalizeSliceIndex(start, length);
+    limit = normalizeSliceIndex(end, length);
+    if(i === undefined) i = length - 1;
+    if(limit === undefined) limit = -1;
+    i = Math.max(-1, Math.min(length - 1, i));
+    limit = Math.max(-1, Math.min(length - 1, limit));
+    for(; i > limit; i += step) result.push(values[i]);
+  }
+  return result;
 }
 
 function evaluateAccess(){
