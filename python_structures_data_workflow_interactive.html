@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estructuras Python: list, tuple y dict</title>
+<style>
+  :root{
+    --bg:#f8f9fb; --card:#ffffff; --ink:#2d3436; --muted:#6b7684;
+    --accent:#4f7df3; --accent-soft:#e8effe; --good:#2f9e44; --bad:#e03131;
+    --warn:#e8a800; --warn-soft:#fff9db; --dict:#0e7490; --dict-soft:#e8f7fa;
+    --border:#e1e6ef; --code:#1e1f29; --anim-speed:.28s;
+  }
+  body.dark{
+    --bg:#111827; --card:#182234; --ink:#eef2ff; --muted:#b8c2d6;
+    --accent:#8fb1ff; --accent-soft:#25385f; --good:#65d68a; --bad:#ff8a8a;
+    --warn:#f5c84b; --warn-soft:#3b3214; --dict:#5ed3e8; --dict-soft:#173844;
+    --border:#344158; --code:#0d111c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); margin:0; padding:24px 16px 60px;
+  }
+  h1{text-align:center; margin:46px 0 2px; color:var(--ink); font-size:28px; letter-spacing:0;}
+  .subtitle{text-align:center; color:var(--muted); margin:0 0 20px; font-size:15px;}
+  .wrap{max-width:1040px; margin:0 auto;}
+
+  .corner-controls{position:fixed;top:10px;right:10px;z-index:9999;
+    display:flex;align-items:center;gap:8px;}
+  .back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;
+    border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);transition:border-color .15s ease,color .15s ease;}
+  .back-to-index:hover{border-color:#4f7df3;color:#4f7df3;}
+  .verify-badge{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:6px 12px;border-radius:999px;display:flex;align-items:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap;}
+  .verify-badge[data-verified="true"]{background:#e6fcf0;color:#2f9e44;border:1px solid #b2f2ce;}
+  .verify-badge[data-verified="true"]::before{content:"\2713 Expert-verified";}
+  .verify-badge[data-verified="false"]{background:#fff9db;color:#9a6a00;border:1px solid #ffe066;}
+  .verify-badge[data-verified="false"]::before{content:"\26A0 AI-generated \00B7 not expert-verified";}
+  .verify-badge[data-author]::after{content:"\00B7 by @" attr(data-author);opacity:.75;margin-left:4px;}
+
+  .tabs{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:0 0 18px;}
+  .tab{
+    cursor:pointer; border:1px solid #cbd7e5; border-radius:999px; padding:8px 15px;
+    background:#fff; color:#435066; font-weight:700; font-size:13px;
+  }
+  .tab:hover{border-color:var(--accent); color:var(--accent);}
+  .tab.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .top-tools{
+    display:grid; grid-template-columns:1.1fr .9fr; gap:14px; margin:0 0 18px;
+  }
+  .tool-card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:14px; box-shadow:0 2px 8px rgba(20,30,60,.04);
+  }
+  .tool-card h2{margin:0 0 8px; font-size:15px;}
+  .tool-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px;}
+  .tool-row input[type="range"]{width:140px;}
+  .history-list{
+    max-height:82px; overflow:auto; margin:0; padding-left:18px; color:var(--muted);
+    font-size:12.5px; line-height:1.45;
+  }
+  .score-pill{
+    display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border);
+    border-radius:999px; padding:7px 10px; background:#fafbfe; color:var(--ink); font-weight:700;
+  }
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:20px 22px; margin-bottom:20px; box-shadow:0 2px 8px rgba(20,30,60,.04);
+  }
+  .card h2{margin:0 0 4px; font-size:17px;}
+  .card .hint{color:var(--muted); font-size:13px; margin:0 0 14px; line-height:1.5;}
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;}
+
+  .ops{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
+  .op{
+    display:flex; align-items:center; gap:6px; background:#fafbfe; border:1px solid var(--border);
+    border-radius:8px; padding:8px 10px;
+  }
+  .op label{font-size:12px; color:var(--muted); font-weight:600;}
+  .op input, .op select{
+    width:76px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px;
+    background:#fff; color:var(--ink);
+  }
+  .op input.wide{width:120px;}
+  button{
+    cursor:pointer; border:none; border-radius:7px; padding:8px 14px; font-size:13px; font-weight:600;
+    background:var(--accent); color:#fff; transition:filter .15s ease, transform .15s ease;
+  }
+  button:hover{filter:brightness(1.08);}
+  button.secondary{background:#eef1f8; color:var(--ink);}
+  button.danger{background:#fff0f0; color:var(--bad); border:1px solid #ffd2d2;}
+  button.warn{background:var(--warn-soft); color:#8a6500; border:1px solid #ffe066;}
+
+  .structure-row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; min-height:64px; padding-top:18px;}
+  .cell{
+    position:relative; min-width:56px; padding:10px 12px; background:var(--accent-soft);
+    border:1.5px solid #c7d6fb; border-radius:8px; text-align:center; font-weight:700;
+    cursor:grab; user-select:none; animation:pop var(--anim-speed) ease;
+  }
+  .cell:active{cursor:grabbing;}
+  .cell .idx{
+    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    font-size:11px; font-weight:600; color:var(--muted);
+  }
+  .cell .nidx{
+    position:absolute; bottom:-18px; left:50%; transform:translateX(-50%);
+    font-size:11px; font-weight:500; color:#9b7180;
+  }
+  .cell.tuple{background:var(--warn-soft); border-color:#ffe066; cursor:default;}
+  .cell.tuple::after{content:" lock"; color:#8a6500; font-size:11px; font-weight:700; margin-left:4px;}
+  .cell.dict{background:var(--dict-soft); border-color:#b6e4ee; cursor:default; text-align:left;}
+  .cell.dict .key{display:block; color:#0e7490; font-size:11px; font-weight:700; margin-bottom:4px;}
+  .cell.dict .arrow{display:inline-block;color:#0e7490;margin:0 5px;animation:arrowPulse calc(var(--anim-speed) * 3) ease infinite;}
+  .cell.drag-over{border-color:var(--accent); border-style:dashed;}
+  .cell.highlight{background:#fff3bf; border-color:#f5c400;}
+  .cell.duplicate,.array-cell.duplicate{animation:duplicateBounce calc(var(--anim-speed) * 2.4) ease;}
+  .error-flash{animation:softShake calc(var(--anim-speed) * 2.2) ease;}
+  @keyframes pop{ from{transform:scale(.65); opacity:0;} to{transform:scale(1); opacity:1;} }
+  @keyframes duplicateBounce{
+    0%{transform:scale(1);} 35%{transform:scale(1.12) translateY(-3px);} 70%{transform:scale(.96);} 100%{transform:scale(1);}
+  }
+  @keyframes softShake{
+    0%,100%{transform:translateX(0);} 25%{transform:translateX(-4px);} 50%{transform:translateX(4px);} 75%{transform:translateX(-2px);}
+  }
+  @keyframes arrowPulse{0%,100%{transform:translateX(0);opacity:.65;}50%{transform:translateX(4px);opacity:1;}}
+  .empty-note{color:var(--muted); font-size:14px; font-style:italic;}
+
+  .code-line, .code-block{
+    font-family:Consolas,"SF Mono",Menlo,monospace; background:var(--code); color:#f5f5f7;
+    border-radius:8px; padding:10px 14px; font-size:13.5px; margin-top:14px; overflow:auto; line-height:1.45;
+  }
+  .code-block{white-space:pre; min-height:150px;}
+  .comment{color:#9aa0b0;}
+  .out{color:#7fd88f;}
+  .err{color:#ff8787;}
+
+  .explain-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;}
+  .mini-card{
+    border:1px solid var(--border); border-radius:10px; padding:14px; background:#fafbfe;
+  }
+  .mini-card h3{margin:0 0 6px; font-size:15px;}
+  .mini-card p{margin:0; color:var(--muted); font-size:13px; line-height:1.45;}
+  .mini-card code{background:#eef1f8; padding:2px 5px; border-radius:5px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th,td{padding:9px 8px; border-bottom:1px solid var(--border); text-align:left;}
+  th{font-size:12px; color:var(--muted);}
+  tbody tr{cursor:pointer;}
+  tbody tr:hover td{background:#f4f7ff;}
+  tbody tr.sel td{background:var(--accent-soft);}
+  .table-wrap{overflow-x:auto;}
+
+  .mode-row{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0;}
+  .mode{
+    background:#fff; color:#435066; border:1px solid #cbd7e5; border-radius:999px; padding:8px 12px;
+  }
+  .mode.active{background:var(--dict); border-color:var(--dict); color:#fff;}
+  .csv-box{
+    display:grid; grid-template-columns:minmax(260px, .9fr) minmax(300px, 1.1fr);
+    gap:16px; align-items:start;
+  }
+  .csv-file{
+    border:1px solid #d6dee9; border-radius:10px; overflow:hidden; background:#fff;
+  }
+  .csv-title{
+    display:flex; justify-content:space-between; gap:10px; align-items:center;
+    background:#eef1f8; border-bottom:1px solid #d6dee9; padding:9px 12px;
+    color:#435066; font-size:13px; font-weight:700;
+  }
+  textarea.csv-text{
+    width:100%; min-height:178px; border:0; resize:vertical; padding:12px;
+    font-family:Consolas,"SF Mono",Menlo,monospace; font-size:13.5px; line-height:1.45;
+    color:var(--ink); background:#fff;
+  }
+  .path{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center; color:var(--muted);
+    font-size:13px; margin-top:10px;
+  }
+  .path code{background:#eef1f8; color:var(--ink); padding:3px 6px; border-radius:5px;}
+  .access-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px;}
+  .access-card{border:1px solid var(--border); border-radius:10px; background:#fafbfe; padding:12px;}
+  .access-card strong{display:block; margin-bottom:6px;}
+  .access-card p{margin:0; color:var(--muted); font-size:13px; line-height:1.45;}
+  .access-controls{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px;}
+  .access-controls input{
+    flex:1 1 190px; min-width:0; padding:8px 10px; border:1px solid var(--border);
+    border-radius:7px; font-family:Consolas,"SF Mono",Menlo,monospace; font-size:13.5px;
+  }
+  .example-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .example-btn{
+    background:#eef1f8; color:#435066; border:1px solid #cbd7e5; padding:6px 9px;
+    font-family:Consolas,"SF Mono",Menlo,monospace; font-size:12px;
+  }
+  .result-pill{
+    margin-top:10px; border-radius:8px; padding:10px 12px; background:#fff; border:1px solid var(--border);
+    font-family:Consolas,"SF Mono",Menlo,monospace; font-size:13.5px; min-height:42px;
+  }
+  .read-guide{
+    margin-top:10px; border-radius:8px; background:#fff; border:1px solid var(--border);
+    padding:10px 12px; font-family:Consolas,"SF Mono",Menlo,monospace; font-size:12.5px;
+    line-height:1.5; color:#35445a; white-space:pre-wrap;
+  }
+  .decision{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  .choice{
+    width:100%; min-height:92px; text-align:left; background:#fff; color:var(--ink);
+    border:1.5px solid var(--border); border-radius:10px; padding:12px;
+  }
+  .choice strong{display:block; margin-bottom:6px;}
+  .choice span{display:block; color:var(--muted); font-weight:500; line-height:1.35;}
+  .choice.correct{border-color:var(--good); background:#e6fcf0;}
+  .choice.wrong{border-color:var(--bad); background:#fff0f0;}
+  .feedback{min-height:38px; color:var(--muted); font-size:14px; line-height:1.45; margin-top:12px;}
+  .array-row,.matrix-vis{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px;}
+  .array-cell{
+    min-width:50px; padding:10px 12px; border:1.5px solid #c7d6fb; border-radius:8px;
+    background:var(--accent-soft); text-align:center; font-weight:700; animation:pop var(--anim-speed) ease;
+  }
+  .array-cell.bool{background:#fff9db; border-color:#ffe066;}
+  .array-cell.pick{background:#e6fcf0; border-color:#b2f2ce;}
+  .matrix-grid{display:grid; gap:6px; margin-top:12px; width:max-content;}
+  .matrix-cell{
+    width:58px; min-height:42px; display:grid; place-items:center; border-radius:7px;
+    border:1.5px solid #c7d6fb; background:var(--accent-soft); font-weight:700;
+  }
+  .matrix-cell.added{background:#e6fcf0; border-color:#b2f2ce;}
+  .matrix-cell.vector{background:#fff9db; border-color:#ffe066;}
+  .formula-line{font-family:Consolas,"SF Mono",Menlo,monospace; color:#435066; margin-top:8px; font-size:13px;}
+  .info-block{
+    border:1px solid var(--border); border-radius:10px; background:#fafbfe; padding:14px;
+    color:var(--muted); line-height:1.5; font-size:14px; margin-top:12px;
+  }
+  .info-block code{background:#eef1f8; color:var(--ink); padding:2px 5px; border-radius:5px;}
+  body.dark .info-block code, body.dark .mini-card code{background:#253043;}
+  body.dark .tab, body.dark .mode, body.dark .choice, body.dark .op, body.dark .tool-card,
+  body.dark .access-card, body.dark .mini-card, body.dark .csv-file, body.dark .result-pill,
+  body.dark .read-guide{background:var(--card); color:var(--ink);}
+  body.dark textarea.csv-text, body.dark .op input, body.dark .op select, body.dark .access-controls input{background:#111827;color:var(--ink);}
+  body.dark .score-pill{background:#111827;}
+  .mini-cols{display:grid; grid-template-columns:repeat(2,1fr); gap:14px;}
+
+  @media (max-width:820px){
+    .two-col,.explain-grid,.decision,.csv-box,.access-grid,.mini-cols,.top-tools{grid-template-columns:1fr;}
+    h1{margin-top:62px;}
+  }
+  @media (max-width:560px){
+    body{padding:18px 10px 40px;}
+    .corner-controls{left:10px; right:auto; flex-wrap:wrap;}
+    .card{padding:16px 14px;}
+    .op{width:100%; align-items:flex-start; flex-wrap:wrap;}
+    .op input,.op select,.op input.wide{width:100%;}
+  }
+</style>
+</head>
+<body>
+<div class="corner-controls">
+  <a href="index.html" class="back-to-index">&larr; Back to index</a>
+  <div class="verify-badge" data-verified="false" data-author="jdVegaS24"></div>
+</div>
+
+<h1>Estructuras basicas de Python</h1>
+<p class="subtitle">Listas, tuplas y diccionarios vistos como herramientas para ciencia de datos</p>
+
+<div class="wrap">
+  <section class="top-tools" aria-label="Controles globales">
+    <div class="tool-card">
+      <h2>Controles interactivos</h2>
+      <div class="tool-row">
+        <button onclick="toggleTheme()">Modo oscuro</button>
+        <button class="secondary" onclick="copyVisibleCode()">Copiar codigo visible</button>
+        <button class="secondary" onclick="playTour()">Play</button>
+        <button class="secondary" onclick="pauseTour()">Pause</button>
+        <button class="secondary" onclick="nextTourStep()">Next step</button>
+        <button class="warn" onclick="resetExperience()">Reset</button>
+        <label>velocidad <input type="range" id="speedRange" min="0.5" max="2" step="0.25" value="1" oninput="setSpeed(this.value)"></label>
+        <span class="score-pill" id="scorePill">Puntaje: 0/0</span>
+      </div>
+    </div>
+    <div class="tool-card">
+      <h2>Historial de operaciones</h2>
+      <ol class="history-list" id="historyList"></ol>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab active" role="tab" aria-selected="true" data-panel="compare">1. Comparar</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="live">2. Probar operaciones</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="comprehension">3. Comprehensions</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="dataset">4. Mini dataset</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="set">5. Set</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="choose">6. Elegir estructura</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="numpy">7. NumPy arrays</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="vector">8. Vectorizacion</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="broadcast">9. Broadcasting</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="linalg">10. Algebra lineal</button>
+  </div>
+
+  <section class="panel active" id="panel-compare">
+    <div class="card">
+      <h2>1. La misma informacion, tres formas</h2>
+      <p class="hint">Agrega valores y observa como cambia la idea: una lista depende del orden, una tupla conserva un paquete fijo y un diccionario nombra cada campo.</p>
+      <div class="two-col">
+        <div>
+          <div class="ops">
+            <div class="op">
+              <label>dato</label>
+              <select id="sampleValue">
+                <option value="Ana">"Ana"</option>
+                <option value="23">23</option>
+                <option value="Quito">"Quito"</option>
+                <option value="8.7">8.7</option>
+              </select>
+              <button onclick="addSample()">Agregar</button>
+            </div>
+            <div class="op">
+              <label>&nbsp;</label>
+              <button class="secondary" onclick="resetSamples()">Reiniciar</button>
+            </div>
+          </div>
+          <div class="code-line" id="sampleCode">&gt;&gt;&gt; valor = "Ana"</div>
+        </div>
+        <div class="explain-grid">
+          <div class="mini-card">
+            <h3>list</h3>
+            <p>Ordenada y mutable. Sirve cuando vas a agregar, borrar, ordenar o filtrar.</p>
+          </div>
+          <div class="mini-card">
+            <h3>tuple</h3>
+            <p>Ordenada e inmutable. Sirve para valores que deben viajar juntos sin editarse.</p>
+          </div>
+          <div class="mini-card">
+            <h3>dict</h3>
+            <p>Usa claves. Sirve cuando importa el nombre del dato, no solo su posicion.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Visualizacion rapida</h2>
+      <div class="two-col">
+        <div>
+          <h2>list y tuple: indices</h2>
+          <div class="structure-row" id="quickSeq"></div>
+          <div class="code-line" id="quickSeqCode"></div>
+        </div>
+        <div>
+          <h2>dict: claves</h2>
+          <div class="structure-row" id="quickDict"></div>
+          <div class="code-line" id="quickDictCode"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-live">
+    <div class="card">
+      <h2>2. Estructura viva</h2>
+      <p class="hint">Cambia el tipo de estructura y prueba operaciones. La lista se edita libremente; la tupla muestra el error cuando intentas modificar; el diccionario trabaja con claves.</p>
+      <div class="ops">
+        <div class="op">
+          <label>estructura</label>
+          <select id="structureType" onchange="changeStructure()">
+            <option value="list">list</option>
+            <option value="tuple">tuple</option>
+            <option value="dict">dict</option>
+          </select>
+        </div>
+        <div class="op" id="seqAppendOp">
+          <label>datos.append(x)</label>
+          <input id="seqAppendValue" value="91">
+          <button onclick="seqAppend()">Agregar</button>
+        </div>
+        <div class="op" id="seqSetOp">
+          <label>datos[i] = x</label>
+          <input id="seqSetIndex" value="0">
+          <input id="seqSetValue" value="100">
+          <button onclick="seqSet()">Modificar</button>
+        </div>
+        <div class="op" id="seqPopOp">
+          <label>datos.pop(i)</label>
+          <input id="seqPopIndex" value="-1">
+          <button class="danger" onclick="seqPop()">Quitar</button>
+        </div>
+        <div class="op" id="dictSetOp" style="display:none">
+          <label>fila[clave] = valor</label>
+          <input id="dictKey" class="wide" value="ciudad">
+          <input id="dictValue" value="Quito">
+          <button onclick="dictSet()">Asignar</button>
+        </div>
+        <div class="op" id="dictDelOp" style="display:none">
+          <label>del fila[clave]</label>
+          <input id="dictDelKey" class="wide" value="edad">
+          <button class="danger" onclick="dictDelete()">Borrar</button>
+        </div>
+        <div class="op">
+          <label>&nbsp;</label>
+          <button class="secondary" onclick="resetLive()">Reiniciar</button>
+        </div>
+      </div>
+
+      <div class="structure-row" id="liveRow"></div>
+      <div class="code-line" id="liveCode"></div>
+      <div class="info-block" id="dictIterBlock"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-comprehension">
+    <div class="card">
+      <h2>3. List comprehensions</h2>
+      <p class="hint">Una comprehension construye una lista nueva en una linea. En ciencia de datos aparece mucho para transformar valores o filtrar observaciones.</p>
+      <div class="ops">
+        <div class="op"><label>notas</label><input class="wide" id="compNotas" value="85,92,78,95,88"></div>
+        <button onclick="runComprehension('squares')">cuadrados</button>
+        <button onclick="runComprehension('approved')">aprobados</button>
+        <button onclick="runComprehension('curve')">curva +5</button>
+        <button onclick="runComprehension('labels')">etiquetas</button>
+      </div>
+      <div class="mini-cols">
+        <div><h2>Entrada</h2><div class="array-row" id="compInput"></div></div>
+        <div><h2>Salida</h2><div class="array-row" id="compOutput"></div></div>
+      </div>
+      <div class="code-line" id="compCode"></div>
+      <div class="read-guide">
+cuadrados = [x**2 for x in range(10)]
+aprobados = [n for n in notas if n >= 80]
+curva = [min(n + 5, 100) for n in notas]
+etiquetas = ["aprobado" if n >= 80 else "revision" for n in notas]
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-dataset">
+    <div class="card">
+      <h2>3. De un CSV exportado a estructuras Python</h2>
+      <p class="hint">Imagina que una plataforma web exporta las notas como archivo <code>.csv</code>. Aqui solo observamos el texto crudo, lo leemos como tabla y editamos filas.</p>
+      <div class="csv-box">
+        <div>
+          <div class="csv-file">
+            <div class="csv-title">
+              <span>notas_estudiantes.csv</span>
+              <span>exportado de la web</span>
+            </div>
+            <textarea class="csv-text" id="csvText" spellcheck="false"></textarea>
+          </div>
+          <div class="path">
+            <button onclick="loadCsv()">Leer CSV</button>
+            <button class="secondary" onclick="resetCsv()">Restaurar CSV</button>
+            <span><code>csv.DictReader</code> convierte filas en diccionarios.</span>
+          </div>
+        </div>
+        <div>
+          <h2>Tabla leida desde el CSV</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>nombre</th><th>edad</th><th>ciudad</th><th>nota</th></tr></thead>
+              <tbody id="datasetBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="ops">
+        <div class="op">
+          <label>nombre</label><input id="rowName" value="Mia">
+        </div>
+        <div class="op">
+          <label>edad</label><input id="rowAge" value="22">
+        </div>
+        <div class="op">
+          <label>ciudad</label><input id="rowCity" value="Cuenca">
+        </div>
+        <div class="op">
+          <label>nota</label><input id="rowScore" value="8.4">
+          <button onclick="addRow()">Insertar fila</button>
+        </div>
+        <div class="op">
+          <label>&nbsp;</label><button class="danger" onclick="deleteSelectedRow()">Borrar seleccionada</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Prueba tomar datos</h2>
+      <p class="hint">Cambia la estructura y escribe accesos como <code>datos[:2]</code>, <code>datos[::-1]</code>, <code>datos[0][:2]</code>, <code>datos[0][3]</code> o <code>datos[0]["nota"]</code>.</p>
+      <div class="mode-row">
+        <button class="mode active" data-access-mode="listRows" onclick="setAccessMode('listRows')">lista de listas</button>
+        <button class="mode" data-access-mode="tupleRows" onclick="setAccessMode('tupleRows')">lista de tuplas</button>
+        <button class="mode" data-access-mode="dictRows" onclick="setAccessMode('dictRows')">lista de diccionarios</button>
+      </div>
+      <div class="code-line" id="accessShape"></div>
+      <div class="access-controls">
+        <input id="accessExpr" value="datos[0]" spellcheck="false">
+        <button onclick="evaluateAccess()">Evaluar</button>
+      </div>
+      <div class="example-row" id="accessExamples"></div>
+      <div class="result-pill" id="accessResult"></div>
+      <div class="read-guide" id="accessGuide"></div>
+    </div>
+
+  </section>
+
+  <section class="panel" id="panel-choose">
+    <div class="card">
+      <h2>4. Elige la estructura correcta</h2>
+      <p class="hint">Lee el caso y elige. No se trata de memorizar simbolos: se trata de elegir la herramienta que hace mas claro el trabajo.</p>
+      <div class="code-line" id="caseText"></div>
+      <div class="decision">
+        <button class="choice" data-choice="list" onclick="answerCase('list')"><strong>list</strong><span>Coleccion editable y ordenada</span></button>
+        <button class="choice" data-choice="tuple" onclick="answerCase('tuple')"><strong>tuple</strong><span>Paquete fijo de valores</span></button>
+        <button class="choice" data-choice="dict" onclick="answerCase('dict')"><strong>dict</strong><span>Campos nombrados por clave</span></button>
+        <button class="choice" data-choice="set" onclick="answerCase('set')"><strong>set</strong><span>Valores unicos y pertenencia rapida</span></button>
+        <button class="choice" data-choice="ndarray" onclick="answerCase('ndarray')"><strong>NumPy ndarray</strong><span>Calculo numerico vectorizado</span></button>
+        <button class="choice" data-choice="dataframe" onclick="answerCase('dataframe')"><strong>DataFrame</strong><span>Datos tabulares con columnas</span></button>
+      </div>
+      <div class="feedback" id="caseFeedback"></div>
+      <button class="secondary" onclick="nextCase()">Siguiente caso</button>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-set">
+    <div class="card">
+      <h2>4. Conjunto set: unicos y pertenencia</h2>
+      <p class="hint">Un <code>set</code> guarda elementos unicos, sin duplicados y sin orden garantizado. Es util para encontrar categorias unicas o comprobar rapido si un elemento existe.</p>
+      <div class="ops">
+        <div class="op">
+          <label>clases</label>
+          <input class="wide" id="setInput" value="gato, perro, gato, ave">
+          <button onclick="buildSet()">Crear set</button>
+        </div>
+        <div class="op">
+          <label>buscar</label>
+          <input id="setQuery" value="gato">
+          <button onclick="checkSet()">Probar in</button>
+        </div>
+      </div>
+      <div class="array-row" id="setBefore"></div>
+      <div class="array-row" id="setAfter"></div>
+      <div class="code-line" id="setCode"></div>
+      <div class="info-block">
+        <code>set</code> no es para filas tabulares, sino para preguntas como: categorias unicas, duplicados eliminados, interseccion <code>a &amp; b</code> y union <code>a | b</code>.
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-numpy">
+    <div class="card">
+      <h2>6. Crear arrays de NumPy</h2>
+      <p class="hint">NumPy convierte listas Python en <code>ndarray</code>: arreglos n-dimensionales, tipados y eficientes para computo numerico.</p>
+      <div class="info-block">
+        <strong>Definicion clave:</strong> NumPy es la biblioteca base para computo numerico en Python. Su estructura central es el <code>ndarray</code>: un arreglo n-dimensional, tipado y optimizado para operaciones vectorizadas, broadcasting, algebra lineal y metodos como <code>np.mean</code>, <code>np.std</code>, <code>np.sum</code> y <code>np.sqrt</code>.
+      </div>
+      <div class="ops">
+        <div class="op">
+          <label>crear</label>
+          <select id="arrayRecipe">
+            <option value="array">np.array([1,2,3,4,5])</option>
+            <option value="matrix">np.array([[1,2,3],[4,5,6]])</option>
+            <option value="zeros">np.zeros((3,4))</option>
+            <option value="ones">np.ones((2,2))</option>
+            <option value="eye">np.eye(3)</option>
+            <option value="arange">np.arange(0,10,2)</option>
+            <option value="linspace">np.linspace(0,1,5)</option>
+          </select>
+          <button onclick="renderArrayRecipe()">Ver array</button>
+        </div>
+      </div>
+      <div id="arrayVisual"></div>
+      <div class="code-line" id="arrayCode"></div>
+      <button class="secondary" onclick="copyTextFrom('arrayCode')">Copiar codigo</button>
+      <div class="info-block" id="arrayInfo"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-vector">
+    <div class="card">
+      <h2>7. Operaciones vectorizadas</h2>
+      <p class="hint">Con NumPy operas arreglos completos sin escribir loops. La operacion ocurre elemento a elemento y el resultado conserva la forma.</p>
+      <div class="ops">
+        <div class="op"><label>a</label><input class="wide" id="vecA" value="1,2,3,4"></div>
+        <div class="op"><label>b</label><input class="wide" id="vecB" value="10,20,30,40"></div>
+        <button onclick="vectorOp('add')">a + b</button>
+        <button onclick="vectorOp('mul')">a * b</button>
+        <button onclick="vectorOp('square')">a ** 2</button>
+        <button onclick="vectorOp('sqrt')">sqrt(a)</button>
+        <button onclick="vectorOp('mask')">a &gt; 2</button>
+        <button onclick="vectorOp('filter')">a[a &gt; 2]</button>
+        <button onclick="vectorOp('stats')">mean/std/sum</button>
+      </div>
+      <div class="mini-cols">
+        <div><h2>Entrada</h2><div class="array-row" id="vectorInput"></div></div>
+        <div><h2>Resultado</h2><div class="array-row" id="vectorOutput"></div></div>
+      </div>
+      <div class="code-line" id="vectorCode"></div>
+      <button class="secondary" onclick="copyTextFrom('vectorCode')">Copiar codigo</button>
+      <div class="info-block">Idea clave de la slide: <code>a + b</code>, <code>a * b</code>, <code>a ** 2</code> y filtros booleanos reemplazan loops explicitos.</div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-broadcast">
+    <div class="card">
+      <h2>8. Broadcasting: operar con distintas formas</h2>
+      <p class="hint">NumPy puede “estirar” dimensiones compatibles. Una matriz <code>(2, 3)</code> puede sumarse con un vector <code>(3,)</code>; el vector se aplica a cada fila.</p>
+      <div class="ops">
+        <button onclick="broadcastExample('scalar')">a + 10</button>
+        <button onclick="broadcastExample('row')">m + v</button>
+        <button onclick="broadcastExample('normalize')">normalizar columnas</button>
+      </div>
+      <div id="broadcastVisual"></div>
+      <div class="code-line" id="broadcastCode"></div>
+      <div class="info-block" id="broadcastInfo"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-linalg">
+    <div class="card">
+      <h2>9. Algebra lineal con NumPy</h2>
+      <p class="hint">NumPy incluye operaciones de algebra lineal: producto matricial, transpuesta, determinante, inversa y solucion de sistemas.</p>
+      <div class="ops">
+        <button onclick="linearOp('matmul')">A @ B</button>
+        <button onclick="linearOp('transpose')">A.T</button>
+        <button onclick="linearOp('det')">det(A)</button>
+        <button onclick="linearOp('inv')">inv(A)</button>
+        <button onclick="linearOp('eig')">eig(A)</button>
+        <button onclick="linearOp('svd')">SVD(A)</button>
+        <button onclick="linearOp('solve')">solve(A, b)</button>
+      </div>
+      <div class="mini-cols">
+        <div>
+          <h2>Datos</h2>
+          <div id="linearInput"></div>
+        </div>
+        <div>
+          <h2>Resultado</h2>
+          <div id="linearOutput"></div>
+        </div>
+      </div>
+      <div class="code-line" id="linearCode"></div>
+      <button class="secondary" onclick="copyTextFrom('linearCode')">Copiar codigo</button>
+      <div class="info-block" id="linearInfo">Estos bloques preparan el terreno para PCA, optimizacion, modelos lineales y redes neuronales.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+let sampleValues = ["Ana", 23, "Quito"];
+let liveType = "list";
+let liveSeq = [85, 92, 78, 95, 88];
+let liveDict = { nombre: "Ana", edad: 23, ciudad: "Quito", nota: 8.7 };
+let selectedRow = 0;
+let accessMode = "listRows";
+const defaultDataset = [
+  { nombre: "Ana", edad: 23, ciudad: "Quito", nota: 8.7 },
+  { nombre: "Luis", edad: 21, ciudad: "Loja", nota: 9.1 }
+];
+let dataset = defaultDataset.map(row => ({...row}));
+let caseIndex = 0;
+let score = 0;
+let attempts = 0;
+let tourTimer = null;
+let speedFactor = 1;
+let booting = true;
+const history = [];
+
+const cases = [
+  { text: "Necesito guardar muchas notas y luego agregar nuevas notas durante el semestre.", answer: "list", why: "Una lista es mutable y crece naturalmente con append." },
+  { text: "Necesito representar una coordenada fija: latitud y longitud.", answer: "tuple", why: "Una tupla comunica que esos valores forman un par estable." },
+  { text: "Leo un CSV con columnas nombre, edad, ciudad y nota. Quiero acceder a la nota con datos[0][\"nota\"].", answer: "dict", why: "La forma practica es una lista de diccionarios: datos[0] es una fila y datos[0][\"nota\"] es una celda nombrada." },
+  { text: "Necesito contar cuantos estudiantes hay por ciudad.", answer: "dict", why: "Un diccionario puede mapear ciudad -> conteo." },
+  { text: "Necesito eliminar categorias repetidas como gato, perro, gato, ave.", answer: "set", why: "Un set conserva valores unicos y permite pertenencia rapida con in." },
+  { text: "Necesito hacer calculo numerico con muchos valores y operaciones vectorizadas.", answer: "ndarray", why: "NumPy ndarray es la estructura base para computo numerico eficiente." },
+  { text: "Necesito datos tabulares con nombres de columnas para limpiar y analizar.", answer: "dataframe", why: "Para tablas grandes, pandas DataFrame es la herramienta natural." }
+];
+
+function py(value){
+  if(Array.isArray(value)) return "[" + value.map(py).join(", ") + "]";
+  if(value && typeof value === "object"){
+    return "{" + Object.entries(value).map(([k,v]) => `"${k}": ${py(v)}`).join(", ") + "}";
+  }
+  if(typeof value === "string") return `"${value}"`;
+  return String(value);
+}
+
+function datasetToCsv(){
+  const lines = ["nombre,edad,ciudad,nota"];
+  dataset.forEach(row => lines.push(`${row.nombre},${row.edad},${row.ciudad},${row.nota}`));
+  return lines.join("\n");
+}
+
+function csvToDataset(text){
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if(lines.length < 2) return [];
+  const headers = lines[0].split(",").map(cell => cell.trim());
+  return lines.slice(1).map(line => {
+    const cells = line.split(",").map(cell => cell.trim());
+    const row = {};
+    headers.forEach((header, index) => row[header] = cells[index] ?? "");
+    return {
+      nombre: String(row.nombre ?? ""),
+      edad: Number(row.edad),
+      ciudad: String(row.ciudad ?? ""),
+      nota: Number(row.nota)
+    };
+  }).filter(row => row.nombre && !Number.isNaN(row.edad) && row.ciudad && !Number.isNaN(row.nota));
+}
+
+function syncCsv(){
+  document.getElementById("csvText").value = datasetToCsv();
+}
+
+function loadCsv(){
+  const parsed = csvToDataset(document.getElementById("csvText").value);
+  if(parsed.length === 0){
+    logOperation("error: no se pudo leer el CSV");
+    return;
+  }
+  dataset = parsed;
+  selectedRow = 0;
+  renderDataset();
+}
+
+function resetCsv(){
+  dataset = defaultDataset.map(row => ({...row}));
+  selectedRow = 0;
+  syncCsv();
+  renderDataset();
+}
+
+function parseValue(raw){
+  const text = String(raw).trim();
+  if(text === "") return "";
+  const num = Number(text);
+  if(!Number.isNaN(num)) return num;
+  return text.replace(/^["']|["']$/g, "");
+}
+
+function showPanel(name){
+  document.querySelectorAll(".tab").forEach(tab => {
+    const active = tab.dataset.panel === name;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  document.querySelectorAll(".panel").forEach(panel => panel.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+}
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => showPanel(tab.dataset.panel));
+});
+
+function logOperation(text){
+  if(booting) return;
+  history.unshift(text);
+  if(history.length > 8) history.pop();
+  const list = document.getElementById("historyList");
+  list.innerHTML = history.map(item => `<li>${item}</li>`).join("");
+}
+
+function setSpeed(value){
+  speedFactor = Number(value);
+  const duration = Math.max(.12, .28 / speedFactor);
+  document.documentElement.style.setProperty("--anim-speed", `${duration}s`);
+  logOperation(`velocidad x${speedFactor}`);
+}
+
+function toggleTheme(){
+  document.body.classList.toggle("dark");
+  logOperation(document.body.classList.contains("dark") ? "modo oscuro activado" : "modo claro activado");
+}
+
+function activePanel(){
+  return document.querySelector(".panel.active");
+}
+
+function copyTextFrom(id){
+  const node = document.getElementById(id);
+  const text = node ? node.innerText : "";
+  navigator.clipboard?.writeText(text);
+  logOperation(`codigo copiado desde ${id}`);
+}
+
+function copyVisibleCode(){
+  const panel = activePanel();
+  const node = panel?.querySelector(".code-block, .code-line");
+  if(node) copyTextFrom(node.id);
+}
+
+function nextTourStep(){
+  const tabs = [...document.querySelectorAll(".tab")];
+  const current = tabs.findIndex(tab => tab.classList.contains("active"));
+  const next = tabs[(current + 1) % tabs.length];
+  showPanel(next.dataset.panel);
+  logOperation(`next step -> ${next.textContent}`);
+}
+
+function playTour(){
+  pauseTour();
+  logOperation("tour iniciado");
+  tourTimer = setInterval(nextTourStep, Math.round(1800 / speedFactor));
+}
+
+function pauseTour(){
+  if(tourTimer) clearInterval(tourTimer);
+  tourTimer = null;
+}
+
+function resetExperience(){
+  pauseTour();
+  score = 0;
+  attempts = 0;
+  updateScore();
+  history.length = 0;
+  document.getElementById("historyList").innerHTML = "";
+  showPanel("compare");
+  logOperation("experiencia reiniciada");
+}
+
+function updateScore(){
+  document.getElementById("scorePill").textContent = `Puntaje: ${score}/${attempts}`;
+}
+
+function flashError(id){
+  const node = document.getElementById(id);
+  if(!node) return;
+  node.classList.remove("error-flash");
+  void node.offsetWidth;
+  node.classList.add("error-flash");
+}
+
+function addSample(){
+  sampleValues.push(parseValue(document.getElementById("sampleValue").value));
+  renderSamples();
+  logOperation("valor agregado a la comparacion");
+}
+
+function resetSamples(){
+  sampleValues = ["Ana", 23, "Quito"];
+  renderSamples();
+}
+
+function renderSamples(){
+  const seq = document.getElementById("quickSeq");
+  const dict = document.getElementById("quickDict");
+  seq.innerHTML = "";
+  dict.innerHTML = "";
+  sampleValues.forEach((value, index) => {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.innerHTML = `<span class="idx">${index}</span>${py(value)}<span class="nidx">${index - sampleValues.length}</span>`;
+    seq.appendChild(cell);
+  });
+  const keys = ["nombre", "edad", "ciudad", "nota", "extra"];
+  sampleValues.forEach((value, index) => {
+    const cell = document.createElement("div");
+    cell.className = "cell dict";
+    cell.innerHTML = `<span class="key">${keys[index] || "campo_" + index}</span><span class="arrow">-></span>${py(value)}`;
+    dict.appendChild(cell);
+  });
+  document.getElementById("sampleCode").innerHTML = `&gt;&gt;&gt; valores.append(${py(sampleValues[sampleValues.length - 1])})`;
+  document.getElementById("quickSeqCode").innerHTML = `&gt;&gt;&gt; lista = ${py(sampleValues)}<br>&gt;&gt;&gt; tupla = (${sampleValues.map(py).join(", ")})`;
+  document.getElementById("quickDictCode").innerHTML = `&gt;&gt;&gt; fila = ${py(Object.fromEntries(sampleValues.map((value, index) => [keys[index] || "campo_" + index, value])))}`;
+}
+
+function changeStructure(){
+  liveType = document.getElementById("structureType").value;
+  const isDict = liveType === "dict";
+  document.getElementById("seqAppendOp").style.display = isDict ? "none" : "flex";
+  document.getElementById("seqSetOp").style.display = isDict ? "none" : "flex";
+  document.getElementById("seqPopOp").style.display = isDict ? "none" : "flex";
+  document.getElementById("dictSetOp").style.display = isDict ? "flex" : "none";
+  document.getElementById("dictDelOp").style.display = isDict ? "flex" : "none";
+  renderLive(`&gt;&gt;&gt; estructura = ${liveType}`);
+}
+
+function seqAppend(){
+  const value = parseValue(document.getElementById("seqAppendValue").value);
+  if(liveType === "tuple"){
+    renderLive(`&gt;&gt;&gt; datos.append(${py(value)})<br><span class="err">AttributeError: 'tuple' object has no attribute 'append'</span>`);
+    flashError("liveCode");
+    logOperation("error: tuple no tiene append");
+    return;
+  }
+  liveSeq.push(value);
+  renderLive(`&gt;&gt;&gt; datos.append(${py(value)})<br><span class="out">${py(liveSeq)}</span>`);
+  logOperation(`append(${py(value)})`);
+}
+
+function seqSet(){
+  let index = parseInt(document.getElementById("seqSetIndex").value, 10);
+  const value = parseValue(document.getElementById("seqSetValue").value);
+  if(Number.isNaN(index)){ renderLive(`<span class="err">IndexError: indice invalido</span>`); flashError("liveCode"); return; }
+  if(index < 0) index = liveSeq.length + index;
+  if(index < 0 || index >= liveSeq.length){ renderLive(`<span class="err">IndexError: list index out of range</span>`); flashError("liveCode"); return; }
+  if(liveType === "tuple"){
+    renderLive(`&gt;&gt;&gt; datos[${document.getElementById("seqSetIndex").value}] = ${py(value)}<br><span class="err">TypeError: 'tuple' object does not support item assignment</span>`);
+    flashError("liveCode");
+    logOperation("error: tuple es inmutable");
+    return;
+  }
+  liveSeq[index] = value;
+  renderLive(`&gt;&gt;&gt; datos[${index}] = ${py(value)}<br><span class="out">${py(liveSeq)}</span>`);
+  logOperation(`datos[${index}] = ${py(value)}`);
+}
+
+function seqPop(){
+  let index = parseInt(document.getElementById("seqPopIndex").value, 10);
+  if(Number.isNaN(index)){ renderLive(`<span class="err">IndexError: indice invalido</span>`); flashError("liveCode"); return; }
+  if(liveType === "tuple"){
+    renderLive(`&gt;&gt;&gt; datos.pop(${index})<br><span class="err">AttributeError: 'tuple' object has no attribute 'pop'</span>`);
+    flashError("liveCode");
+    return;
+  }
+  if(index < 0) index = liveSeq.length + index;
+  if(index < 0 || index >= liveSeq.length){ renderLive(`<span class="err">IndexError: pop index out of range</span>`); flashError("liveCode"); return; }
+  const removed = liveSeq.splice(index, 1)[0];
+  renderLive(`&gt;&gt;&gt; datos.pop(${index})<br><span class="out">${py(removed)}</span> <span class="comment"># datos ahora es</span> <span class="out">${py(liveSeq)}</span>`);
+  logOperation(`pop(${index})`);
+}
+
+function dictSet(){
+  const key = document.getElementById("dictKey").value.trim() || "campo";
+  const value = parseValue(document.getElementById("dictValue").value);
+  liveDict[key] = value;
+  renderLive(`&gt;&gt;&gt; fila["${key}"] = ${py(value)}<br><span class="out">${py(liveDict)}</span>`);
+  logOperation(`fila["${key}"] = ${py(value)}`);
+}
+
+function dictDelete(){
+  const key = document.getElementById("dictDelKey").value.trim();
+  if(!(key in liveDict)){
+    renderLive(`&gt;&gt;&gt; del fila["${key}"]<br><span class="err">KeyError: '${key}'</span>`);
+    flashError("liveCode");
+    return;
+  }
+  delete liveDict[key];
+  renderLive(`&gt;&gt;&gt; del fila["${key}"]<br><span class="out">${py(liveDict)}</span>`);
+  logOperation(`del fila["${key}"]`);
+}
+
+function resetLive(){
+  liveSeq = [85, 92, 78, 95, 88];
+  liveDict = { nombre: "Ana", edad: 23, ciudad: "Quito", nota: 8.7 };
+  renderLive("&gt;&gt;&gt; datos = [85, 92, 78, 95, 88]");
+}
+
+function renderLive(code){
+  const row = document.getElementById("liveRow");
+  row.innerHTML = "";
+  const iterBlock = document.getElementById("dictIterBlock");
+  if(liveType === "dict"){
+    Object.entries(liveDict).forEach(([key, value]) => {
+      const cell = document.createElement("div");
+      cell.className = "cell dict";
+      cell.innerHTML = `<span class="key">${key}</span><span class="arrow">-></span>${py(value)}`;
+      row.appendChild(cell);
+    });
+    iterBlock.innerHTML = `<strong>Iterar un diccionario:</strong><br><code>for clave, valor in estudiante.items():</code><br><code>&nbsp;&nbsp;&nbsp;&nbsp;print(f"{clave}: {valor}")</code><br><br>${Object.entries(liveDict).map(([k,v]) => `${k}: ${py(v)}`).join("<br>")}`;
+  } else {
+    liveSeq.forEach((value, index) => {
+      const cell = document.createElement("div");
+      cell.className = "cell" + (liveType === "tuple" ? " tuple" : "");
+      cell.innerHTML = `<span class="idx">${index}</span>${py(value)}<span class="nidx">${index - liveSeq.length}</span>`;
+      row.appendChild(cell);
+    });
+    iterBlock.innerHTML = liveType === "tuple"
+      ? `<strong>Tuple:</strong> se puede recorrer y desempaquetar, pero no modificar: <code>x, y = punto</code>.`
+      : `<strong>List:</strong> se recorre con <code>for n in notas</code> y se transforma con comprehensions.`;
+  }
+  document.getElementById("liveCode").innerHTML = code || currentLiveCode();
+}
+
+function currentLiveCode(){
+  if(liveType === "list") return `&gt;&gt;&gt; datos = ${py(liveSeq)}`;
+  if(liveType === "tuple") return `&gt;&gt;&gt; datos = (${liveSeq.map(py).join(", ")})`;
+  return `&gt;&gt;&gt; fila = ${py(liveDict)}`;
+}
+
+function renderDataset(){
+  const body = document.getElementById("datasetBody");
+  body.innerHTML = "";
+  dataset.forEach((row, index) => {
+    const tr = document.createElement("tr");
+    tr.className = index === selectedRow ? "sel" : "";
+    tr.innerHTML = `<td>${row.nombre}</td><td>${row.edad}</td><td>${row.ciudad}</td><td>${row.nota}</td>`;
+    tr.addEventListener("click", () => {
+      selectedRow = index;
+      renderDataset();
+    });
+    body.appendChild(tr);
+  });
+  syncCsv();
+  renderAccessPractice();
+}
+
+function accessRows(){
+  if(accessMode === "dictRows"){
+    return dataset.map(row => ({...row}));
+  }
+  return dataset.map(row => [row.nombre, row.edad, row.ciudad, row.nota]);
+}
+
+function pyAccessValue(value){
+  if(Array.isArray(value)){
+    if(accessMode === "tupleRows" && value.every(item => Array.isArray(item))){
+      return "[" + value.map(row => "(" + row.map(py).join(", ") + ")").join(", ") + "]";
+    }
+    if(accessMode === "tupleRows"){
+      return "(" + value.map(py).join(", ") + ")";
+    }
+    return py(value);
+  }
+  return py(value);
+}
+
+function setAccessMode(mode){
+  accessMode = mode;
+  const input = document.getElementById("accessExpr");
+  input.value = mode === "dictRows" ? 'datos[0]["nota"]' : "datos[0][3]";
+  renderAccessPractice();
+  evaluateAccess();
+}
+
+function renderAccessPractice(){
+  const shape = document.getElementById("accessShape");
+  if(!shape) return;
+  document.querySelectorAll("[data-access-mode]").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.accessMode === accessMode);
+  });
+  const rows = accessRows();
+  if(accessMode === "dictRows"){
+    shape.innerHTML = `datos = ${pyAccessValue(rows.slice(0, 2))}`;
+    document.getElementById("accessGuide").textContent = 'datos[:2]           # varias filas\ndatos[::-1]        # todas las filas invertidas\ndatos[0]            # una fila completa como dict\ndatos[0]["nota"]    # una celda por nombre de campo\ndatos[-1]["ciudad"] # campo de la ultima fila';
+    renderAccessExamples(['datos[:2]', 'datos[::-1]', 'datos[0]', 'datos[-1]', 'datos[0]["nota"]', 'datos[-1]["ciudad"]']);
+  } else {
+    shape.innerHTML = accessMode === "tupleRows"
+      ? `datos = ${pyAccessValue(rows.slice(0, 2))}`
+      : `datos = ${py(rows.slice(0, 2))}`;
+    document.getElementById("accessGuide").textContent = "datos[:2]      # varias filas\ndatos[::-1]   # todas las filas invertidas\ndatos[0]       # una fila completa\ndatos[0][::-1] # fila invertida\ndatos[0][:2]   # varios campos dentro de una fila\ndatos[0][3]    # una celda dentro de una fila\ndatos[-1]      # ultima fila";
+    renderAccessExamples(["datos[:2]", "datos[::-1]", "datos[0]", "datos[-1]", "datos[0][::-1]", "datos[0][:2]", "datos[0][3]"]);
+  }
+}
+
+function renderAccessExamples(examples){
+  document.getElementById("accessExamples").innerHTML = examples.map(expr => (
+    `<button class="example-btn" onclick="setAccessExpr('${expr.replaceAll('"', "&quot;")}')">${expr}</button>`
+  )).join("");
+}
+
+function setAccessExpr(expr){
+  document.getElementById("accessExpr").value = expr;
+  evaluateAccess();
+}
+
+function parseAccessExpression(expr){
+  const clean = expr.replace(/\s+/g, "");
+  if(!clean.startsWith("datos")) throw new Error("Empieza con datos, por ejemplo datos[0] o datos[:2].");
+  let rest = clean.slice(5);
+  if(rest === "") return [];
+  const tokens = [];
+  while(rest.length){
+    const match = rest.match(/^\[([^\]]*)\]/);
+    if(!match) throw new Error("Usa solo corchetes: datos[0], datos[:2], datos[0][3] o datos[0][\"nota\"].");
+    tokens.push(match[1]);
+    rest = rest.slice(match[0].length);
+  }
+  return tokens;
+}
+
+function applyAccessToken(value, token){
+  if(token.includes(":")){
+    if(!Array.isArray(value)) throw new Error("El slicing con : funciona sobre listas o tuplas, no sobre un dict.");
+    const parts = token.split(":");
+    if(parts.length > 3) throw new Error("Un slice tiene hasta tres partes: inicio:fin:paso.");
+    const [rawStart = "", rawEnd = "", rawStep = ""] = parts;
+    const start = rawStart === "" ? undefined : Number(rawStart);
+    const end = rawEnd === "" ? undefined : Number(rawEnd);
+    const step = rawStep === "" ? 1 : Number(rawStep);
+    if((rawStart !== "" && Number.isNaN(start)) || (rawEnd !== "" && Number.isNaN(end)) || (rawStep !== "" && Number.isNaN(step))){
+      throw new Error("En un slice usa numeros: datos[:2], datos[1:] o datos[::-1].");
+    }
+    if(step === 0) throw new Error("El paso del slice no puede ser 0.");
+    return pySlice(value, start, end, step);
+  }
+  if(/^["'].+["']$/.test(token)){
+    const key = token.slice(1, -1);
+    if(!value || typeof value !== "object" || Array.isArray(value)){
+      throw new Error("Las claves como [\"nota\"] solo funcionan cuando la fila es un dict.");
+    }
+    if(!(key in value)) throw new Error(`La clave "${key}" no existe en esta fila.`);
+    return value[key];
+  }
+  const index = Number(token);
+  if(!Number.isInteger(index)) throw new Error("Usa un indice entero o una clave entre comillas.");
+  if(!Array.isArray(value)) throw new Error("Los indices numericos funcionan sobre listas o tuplas.");
+  const fixedIndex = index < 0 ? value.length + index : index;
+  if(fixedIndex < 0 || fixedIndex >= value.length) throw new Error("Ese indice esta fuera del rango disponible.");
+  return value[fixedIndex];
+}
+
+function normalizeSliceIndex(index, length){
+  if(index === undefined) return undefined;
+  return index < 0 ? length + index : index;
+}
+
+function pySlice(values, start, end, step){
+  if(step === 1){
+    return values.slice(start, end);
+  }
+  const result = [];
+  const length = values.length;
+  let i;
+  let limit;
+  if(step > 0){
+    i = normalizeSliceIndex(start, length);
+    limit = normalizeSliceIndex(end, length);
+    if(i === undefined) i = 0;
+    if(limit === undefined) limit = length;
+    i = Math.max(0, Math.min(length, i));
+    limit = Math.max(0, Math.min(length, limit));
+    for(; i < limit; i += step) result.push(values[i]);
+  } else {
+    i = normalizeSliceIndex(start, length);
+    limit = normalizeSliceIndex(end, length);
+    if(i === undefined) i = length - 1;
+    if(limit === undefined) limit = -1;
+    i = Math.max(-1, Math.min(length - 1, i));
+    limit = Math.max(-1, Math.min(length - 1, limit));
+    for(; i > limit; i += step) result.push(values[i]);
+  }
+  return result;
+}
+
+function evaluateAccess(){
+  const input = document.getElementById("accessExpr");
+  const result = document.getElementById("accessResult");
+  try{
+    const tokens = parseAccessExpression(input.value);
+    const value = tokens.reduce((current, token) => applyAccessToken(current, token), accessRows());
+    result.innerHTML = `&gt;&gt;&gt; ${input.value}<br><span class="out">${pyAccessValue(value)}</span>`;
+    logOperation(`acceso: ${input.value}`);
+  } catch(error){
+    result.innerHTML = `&gt;&gt;&gt; ${input.value}<br><span class="err">${error.message}</span>`;
+    flashError("accessResult");
+    logOperation(`error acceso: ${input.value}`);
+  }
+}
+
+function addRow(){
+  dataset.push({
+    nombre: String(parseValue(document.getElementById("rowName").value)),
+    edad: Number(parseValue(document.getElementById("rowAge").value)),
+    ciudad: String(parseValue(document.getElementById("rowCity").value)),
+    nota: Number(parseValue(document.getElementById("rowScore").value))
+  });
+  selectedRow = dataset.length - 1;
+  syncCsv();
+  renderDataset();
+}
+
+function deleteSelectedRow(){
+  if(dataset.length <= 1) return;
+  dataset.splice(selectedRow, 1);
+  selectedRow = Math.max(0, selectedRow - 1);
+  syncCsv();
+  renderDataset();
+}
+
+function renderCase(){
+  const item = cases[caseIndex];
+  document.getElementById("caseText").innerHTML = `Caso ${caseIndex + 1}: ${item.text}`;
+  document.getElementById("caseFeedback").textContent = "";
+  document.querySelectorAll(".choice").forEach(btn => {
+    btn.classList.remove("correct", "wrong");
+  });
+}
+
+function answerCase(choice){
+  const item = cases[caseIndex];
+  attempts += 1;
+  if(choice === item.answer) score += 1;
+  updateScore();
+  document.querySelectorAll(".choice").forEach(btn => {
+    btn.classList.remove("correct", "wrong");
+    if(btn.dataset.choice === item.answer) btn.classList.add("correct");
+    if(btn.dataset.choice === choice && choice !== item.answer) btn.classList.add("wrong");
+  });
+  document.getElementById("caseFeedback").textContent = choice === item.answer ? item.why : `Casi. Mejor ${item.answer}: ${item.why}`;
+  logOperation(choice === item.answer ? `desafio correcto: ${choice}` : `desafio: ${choice}, respuesta ${item.answer}`);
+}
+
+function nextCase(){
+  caseIndex = (caseIndex + 1) % cases.length;
+  renderCase();
+}
+
+function runComprehension(kind){
+  const notas = parseNums(document.getElementById("compNotas").value);
+  drawArray("compInput", notas);
+  let result = [];
+  let code = "";
+  if(kind === "squares"){
+    result = Array.from({length:10}, (_,x) => x ** 2);
+    code = `cuadrados = [x**2 for x in range(10)]`;
+  }
+  if(kind === "approved"){
+    result = notas.filter(n => n >= 80);
+    code = `aprobados = [n for n in notas if n >= 80]`;
+  }
+  if(kind === "curve"){
+    result = notas.map(n => Math.min(n + 5, 100));
+    code = `curva = [min(n + 5, 100) for n in notas]`;
+  }
+  if(kind === "labels"){
+    result = notas.map(n => n >= 80 ? "aprobado" : "revision");
+    code = `etiquetas = ["aprobado" if n >= 80 else "revision" for n in notas]`;
+  }
+  drawArray("compOutput", result, kind === "approved" ? "pick" : "");
+  document.getElementById("compCode").innerHTML = `&gt;&gt;&gt; notas = ${py(notas)}<br>&gt;&gt;&gt; ${code}<br><span class="out">${py(result)}</span>`;
+  logOperation(`comprehension: ${kind}`);
+}
+
+function parseNums(text){
+  return text.split(",").map(x => Number(x.trim())).filter(x => !Number.isNaN(x));
+}
+
+function drawArray(id, arr, extraClass = ""){
+  const host = document.getElementById(id);
+  host.innerHTML = "";
+  arr.forEach(value => {
+    const cell = document.createElement("div");
+    cell.className = "array-cell " + extraClass;
+    cell.textContent = typeof value === "number" ? Number(value.toFixed ? value.toFixed(3) : value) : String(value);
+    host.appendChild(cell);
+  });
+}
+
+function drawSetBefore(id, arr){
+  const host = document.getElementById(id);
+  host.innerHTML = "";
+  const seen = new Set();
+  arr.forEach(value => {
+    const duplicate = seen.has(value);
+    seen.add(value);
+    const cell = document.createElement("div");
+    cell.className = "array-cell" + (duplicate ? " duplicate" : "");
+    cell.textContent = value;
+    host.appendChild(cell);
+  });
+}
+
+function matrixHtml(matrix, cols, extra = ""){
+  return `<div class="matrix-grid" style="grid-template-columns:repeat(${cols},58px)">` +
+    matrix.flat().map(value => `<div class="matrix-cell ${extra}">${typeof value === "number" ? Number(value.toFixed(3)) : value}</div>`).join("") +
+    `</div>`;
+}
+
+function buildSet(){
+  const raw = document.getElementById("setInput").value.split(",").map(x => x.trim()).filter(Boolean);
+  const unique = [...new Set(raw)];
+  drawSetBefore("setBefore", raw);
+  drawArray("setAfter", unique, "pick");
+  document.getElementById("setCode").innerHTML = `&gt;&gt;&gt; clases = {${raw.map(py).join(", ")}}<br><span class="comment"># duplicados eliminados</span> <span class="out">{${unique.map(py).join(", ")}}</span>`;
+  logOperation("set creado: duplicados eliminados");
+}
+
+function checkSet(){
+  const raw = document.getElementById("setInput").value.split(",").map(x => x.trim()).filter(Boolean);
+  const unique = new Set(raw);
+  const query = document.getElementById("setQuery").value.trim();
+  const answer = unique.has(query);
+  document.getElementById("setCode").innerHTML = `&gt;&gt;&gt; ${py(query)} in clases<br><span class="out">${answer ? "True" : "False"}</span>`;
+  logOperation(`${py(query)} in set -> ${answer ? "True" : "False"}`);
+}
+
+function renderArrayRecipe(){
+  const recipe = document.getElementById("arrayRecipe").value;
+  const host = document.getElementById("arrayVisual");
+  let code = "";
+  let info = "";
+  if(recipe === "array"){
+    host.innerHTML = `<div class="array-row" id="arrayRecipeRow"></div>`;
+    drawArray("arrayRecipeRow", [1,2,3,4,5]);
+    code = `&gt;&gt;&gt; a = np.array([1, 2, 3, 4, 5])<br>&gt;&gt;&gt; a.shape, a.dtype, a.ndim<br><span class="out">((5,), int64, 1)</span>`;
+    info = "Un vector tiene una dimension: shape (5,).";
+  }
+  if(recipe === "matrix"){
+    host.innerHTML = matrixHtml([[1,2,3],[4,5,6]], 3);
+    code = `&gt;&gt;&gt; m = np.array([[1, 2, 3], [4, 5, 6]])<br>&gt;&gt;&gt; m.shape, m.dtype, m.ndim<br><span class="out">((2, 3), int64, 2)</span>`;
+    info = "Una matriz tiene dos dimensiones: filas y columnas.";
+  }
+  if(recipe === "zeros"){
+    host.innerHTML = matrixHtml([[0,0,0,0],[0,0,0,0],[0,0,0,0]], 4);
+    code = `&gt;&gt;&gt; np.zeros((3, 4))`;
+    info = "Crea una matriz 3x4 de ceros.";
+  }
+  if(recipe === "ones"){
+    host.innerHTML = matrixHtml([[1,1],[1,1]], 2);
+    code = `&gt;&gt;&gt; np.ones((2, 2))`;
+    info = "Crea una matriz 2x2 de unos.";
+  }
+  if(recipe === "eye"){
+    host.innerHTML = matrixHtml([[1,0,0],[0,1,0],[0,0,1]], 3);
+    code = `&gt;&gt;&gt; np.eye(3)`;
+    info = "Crea la matriz identidad 3x3.";
+  }
+  if(recipe === "arange"){
+    host.innerHTML = `<div class="array-row" id="arrayRecipeRow"></div>`;
+    drawArray("arrayRecipeRow", [0,2,4,6,8]);
+    code = `&gt;&gt;&gt; np.arange(0, 10, 2)<br><span class="out">array([0, 2, 4, 6, 8])</span>`;
+    info = "Genera una secuencia con salto fijo.";
+  }
+  if(recipe === "linspace"){
+    host.innerHTML = `<div class="array-row" id="arrayRecipeRow"></div>`;
+    drawArray("arrayRecipeRow", [0,0.25,0.5,0.75,1]);
+    code = `&gt;&gt;&gt; np.linspace(0, 1, 5)<br><span class="out">array([0, 0.25, 0.5, 0.75, 1.0])</span>`;
+    info = "Genera puntos igualmente espaciados entre inicio y fin.";
+  }
+  document.getElementById("arrayCode").innerHTML = code;
+  document.getElementById("arrayInfo").textContent = info;
+  logOperation(`NumPy: ${recipe}`);
+}
+
+function vectorOp(kind){
+  const a = parseNums(document.getElementById("vecA").value);
+  const b = parseNums(document.getElementById("vecB").value);
+  drawArray("vectorInput", a);
+  let result = [];
+  let code = "";
+  if(kind === "add"){ result = a.map((v,i) => v + b[i]); code = "a + b"; }
+  if(kind === "mul"){ result = a.map((v,i) => v * b[i]); code = "a * b"; }
+  if(kind === "square"){ result = a.map(v => v ** 2); code = "a ** 2"; }
+  if(kind === "sqrt"){ result = a.map(v => Math.sqrt(v)); code = "np.sqrt(a)  # funcion universal aplicada elemento a elemento"; }
+  if(kind === "mask"){ result = a.map(v => v > 2); code = "a > 2"; drawArray("vectorOutput", result, "bool"); document.getElementById("vectorCode").innerHTML = `&gt;&gt;&gt; ${code}<br><span class="out">${py(result)}</span>`; logOperation("vectorizacion: mascara booleana"); return; }
+  if(kind === "filter"){ result = a.filter(v => v > 2); code = "a[a > 2]"; drawArray("vectorOutput", result, "pick"); document.getElementById("vectorCode").innerHTML = `&gt;&gt;&gt; ${code}<br><span class="out">${py(result)}</span>`; logOperation("vectorizacion: fancy indexing"); return; }
+  if(kind === "stats"){
+    const mean = a.reduce((s,v)=>s+v,0)/a.length;
+    const std = Math.sqrt(a.reduce((s,v)=>s+(v-mean)**2,0)/a.length);
+    result = [mean, std, a.reduce((s,v)=>s+v,0)];
+    code = "np.mean(a), np.std(a), np.sum(a)  # metodos/funciones de agregacion";
+  }
+  drawArray("vectorOutput", result);
+  document.getElementById("vectorCode").innerHTML = `&gt;&gt;&gt; ${code}<br><span class="out">${py(result)}</span>`;
+  logOperation(`vectorizacion: ${kind}`);
+}
+
+function broadcastExample(kind){
+  const host = document.getElementById("broadcastVisual");
+  if(kind === "scalar"){
+    const a = [1,2,3];
+    const out = a.map(v => v + 10);
+    host.innerHTML = `<div class="formula-line">a shape (3,) + escalar -> el 10 se suma a cada elemento</div>
+      <div class="mini-cols">
+        <div><h2>a</h2><div class="array-row" id="broadcastA"></div></div>
+        <div><h2>resultado</h2><div class="array-row" id="broadcastArray"></div></div>
+      </div>`;
+    drawArray("broadcastA", a);
+    drawArray("broadcastArray", out, "pick");
+    document.getElementById("broadcastCode").innerHTML = `&gt;&gt;&gt; a + 10<br><span class="out">${py(out)}</span>`;
+    document.getElementById("broadcastInfo").textContent = "El escalar 10 se aplica a cada elemento.";
+    logOperation("broadcasting: escalar");
+  }
+  if(kind === "row"){
+    const m = [[1,2,3],[4,5,6]];
+    const v = [10,20,30];
+    const out = m.map(row => row.map((x,i) => x + v[i]));
+    host.innerHTML = `<div class="formula-line">m shape (2,3) + v shape (3,) -> v se alinea con las columnas y se repite en cada fila</div>
+      <div class="mini-cols">
+        <div><h2>m</h2>${matrixHtml(m, 3)}</div>
+        <div><h2>v</h2><div class="array-row" id="broadcastV"></div></div>
+      </div>
+      <div class="formula-line">resultado: cada fila de m recibe + [10, 20, 30]</div>
+      ${matrixHtml(out, 3, "added")}`;
+    drawArray("broadcastV", v, "vector");
+    document.getElementById("broadcastCode").innerHTML = `&gt;&gt;&gt; m + v<br><span class="out">[[11, 22, 33], [14, 25, 36]]</span>`;
+    document.getElementById("broadcastInfo").textContent = "El vector v se alinea con las columnas y se suma a cada fila.";
+    logOperation("broadcasting: matriz + vector");
+  }
+  if(kind === "normalize"){
+    const m = [[1,2,3],[4,5,6]];
+    const media = [2.5,3.5,4.5];
+    const std = [1.5,1.5,1.5];
+    const out = [[-1,-1,-1],[1,1,1]];
+    host.innerHTML = `<div class="formula-line">m_norm = (m - media) / std, con media y std calculadas por columna</div>
+      <div class="mini-cols">
+        <div><h2>m</h2>${matrixHtml(m,3)}</div>
+        <div><h2>media y std</h2><div class="array-row" id="broadcastMean"></div><div class="array-row" id="broadcastStd"></div></div>
+      </div>
+      <div class="formula-line">resultado normalizado</div>${matrixHtml(out, 3, "added")}`;
+    drawArray("broadcastMean", media, "vector");
+    drawArray("broadcastStd", std, "vector");
+    document.getElementById("broadcastCode").innerHTML = `&gt;&gt;&gt; media = m.mean(axis=0)<br>&gt;&gt;&gt; std = m.std(axis=0)<br>&gt;&gt;&gt; (m - media) / std`;
+    document.getElementById("broadcastInfo").textContent = "La media y la desviacion por columna se aplican a cada fila: esto es comun antes de entrenar modelos.";
+    logOperation("broadcasting: normalizacion");
+  }
+}
+
+function vectorPlot(vectors, labels){
+  const scale = 28;
+  const cx = 120;
+  const cy = 110;
+  const arrows = vectors.map((v, i) => {
+    const x = cx + v[0] * scale;
+    const y = cy - v[1] * scale;
+    const color = i === 0 ? "#4f7df3" : "#2f9e44";
+    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${color}" stroke-width="3" marker-end="url(#arrow)"></line>
+      <text x="${x + 6}" y="${y - 6}" fill="${color}" font-size="12">${labels[i]}</text>`;
+  }).join("");
+  return `<svg width="260" height="220" viewBox="0 0 260 220" role="img" aria-label="Vectores en el plano">
+    <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="currentColor"></path></marker></defs>
+    <line x1="20" y1="${cy}" x2="240" y2="${cy}" stroke="#d6dee9"></line>
+    <line x1="${cx}" y1="20" x2="${cx}" y2="200" stroke="#d6dee9"></line>
+    ${arrows}
+  </svg>`;
+}
+
+function linearOp(kind){
+  const A = [[1,2],[3,4]];
+  const B = [[5,6],[7,8]];
+  document.getElementById("linearInput").innerHTML = `<div class="formula-line">A</div>${matrixHtml(A,2)}<div class="formula-line">B</div>${matrixHtml(B,2)}`;
+  let html = "";
+  let code = "";
+  let info = "Estos bloques preparan el terreno para PCA, optimizacion, modelos lineales y redes neuronales.";
+  if(kind === "matmul"){
+    html = matrixHtml([[19,22],[43,50]], 2, "added");
+    code = `&gt;&gt;&gt; A @ B<br><span class="out">[[19, 22], [43, 50]]</span>`;
+    info = "Producto matricial: combina filas de A con columnas de B. Es central en modelos lineales y redes neuronales.";
+  }
+  if(kind === "transpose"){
+    html = matrixHtml([[1,3],[2,4]], 2, "added");
+    code = `&gt;&gt;&gt; A.T<br><span class="out">[[1, 3], [2, 4]]</span>`;
+    info = "La transpuesta intercambia filas y columnas.";
+  }
+  if(kind === "det"){
+    html = `<div class="result-pill"><span class="out">-2.0</span></div>`;
+    code = `&gt;&gt;&gt; np.linalg.det(A)<br><span class="out">-2.0</span>`;
+    info = "El determinante resume como la matriz escala areas y si es invertible.";
+  }
+  if(kind === "inv"){
+    html = matrixHtml([[-2,1],[1.5,-0.5]], 2, "added");
+    code = `&gt;&gt;&gt; np.linalg.inv(A)<br><span class="out">[[-2, 1], [1.5, -0.5]]</span>`;
+    info = "La inversa deshace la transformacion de A cuando la matriz es invertible.";
+  }
+  if(kind === "eig"){
+    html = vectorPlot([[1, -1], [1, 1.5]], ["v1", "v2"]) + `<div class="result-pill"><span class="out">eigenvalores aproximados: -0.372, 5.372</span></div>`;
+    code = `&gt;&gt;&gt; vals, vecs = np.linalg.eig(A)<br><span class="out">vals = [-0.372, 5.372]</span>`;
+    info = "Eigenvectores son direcciones que la matriz solo estira o encoge. La direccion no gira; cambia por un factor llamado eigenvalor.";
+  }
+  if(kind === "svd"){
+    html = `<div class="formula-line">A = U @ diag(S) @ Vt</div>
+      <div class="mini-cols">
+        <div>
+          <h2>diag(S): valores singulares</h2>
+          ${matrixHtml([[5.465,0],[0,0.366]],2,"added")}
+        </div>
+        <div>
+          <h2>Direcciones principales</h2>
+          ${vectorPlot([[1,0.4],[0.4,-1]], ["v1 derecha", "u1 izquierda"])}
+        </div>
+      </div>
+      <div class="read-guide">U   # vectores singulares izquierdos: direcciones en el espacio de salida
+S   # valores singulares: cuanto se estira cada direccion
+Vt  # vectores singulares derechos transpuestos: direcciones en el espacio de entrada</div>`;
+    code = `&gt;&gt;&gt; U, S, Vt = np.linalg.svd(A)<br><span class="out">S = [5.465, 0.366]</span><br><span class="comment"># A = U @ np.diag(S) @ Vt</span>`;
+    info = "SVD no devuelve un vector singular llamado S: S contiene valores singulares. Las direcciones estan en U y Vt. Es base de PCA, compresion y reduccion de dimensionalidad.";
+  }
+  if(kind === "solve"){
+    html = `<div class="result-pill"><span class="out">x = [1, 2]</span></div>`;
+    code = `&gt;&gt;&gt; b = np.array([5, 11])<br>&gt;&gt;&gt; np.linalg.solve(A, b)<br><span class="out">[1, 2]</span>`;
+    info = "Resolver Ax = b encuentra los valores x que satisfacen simultaneamente las ecuaciones lineales.";
+  }
+  document.getElementById("linearOutput").innerHTML = html;
+  document.getElementById("linearCode").innerHTML = code;
+  document.getElementById("linearInfo").textContent = info;
+  logOperation(`algebra lineal: ${kind}`);
+}
+
+renderSamples();
+changeStructure();
+syncCsv();
+renderDataset();
+evaluateAccess();
+renderCase();
+runComprehension("approved");
+buildSet();
+renderArrayRecipe();
+vectorOp("add");
+broadcastExample("row");
+linearOp("matmul");
+booting = false;
+</script>
+</body>
+</html>
