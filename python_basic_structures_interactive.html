@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estructuras basicas de Python: list, tuple y dict</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f6f8fb;
+    color: #1f2937;
+    min-height: 100vh;
+  }
+
+  .corner-controls{position:fixed;top:10px;right:10px;z-index:9999;
+    display:flex;align-items:center;gap:8px;}
+  .back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;
+    border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);transition:border-color .15s ease,color .15s ease;}
+  .back-to-index:hover{border-color:#4f7df3;color:#4f7df3;}
+  .verify-badge{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:6px 12px;border-radius:999px;display:flex;align-items:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap;}
+  .verify-badge[data-verified="true"]{background:#e6f9f1;color:#1a7a4a;border:1px solid #9ad9bb;}
+  .verify-badge[data-verified="true"]::before{content:"\2713 Expert-verified";}
+  .verify-badge[data-verified="false"]{background:#fdf3e7;color:#9a5b00;border:1px solid #f0c088;}
+  .verify-badge[data-verified="false"]::before{content:"\26A0 AI-generated \00B7 not expert-verified";}
+  .verify-badge[data-author]::after{content:"\00B7 by @" attr(data-author);opacity:.75;margin-left:4px;}
+
+  main {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    padding: 74px 20px 34px;
+  }
+
+  header {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    margin: 0;
+    color: #20314c;
+    font-size: clamp(1.7rem, 3vw, 2.5rem);
+    line-height: 1.15;
+    letter-spacing: 0;
+  }
+
+  .subtitle {
+    margin: 0;
+    max-width: 820px;
+    color: #516070;
+    line-height: 1.55;
+    font-size: 1rem;
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(220px, 300px) 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .bank, .lab, .inspector, .compare {
+    background: #fff;
+    border: 1px solid #dfe6ef;
+    border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(31, 41, 55, .06);
+  }
+
+  .bank, .inspector, .compare {
+    padding: 16px;
+  }
+
+  .bank h2, .inspector h2, .compare h2 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    color: #20314c;
+  }
+
+  .token-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .token {
+    border: 1px solid #cbd7e5;
+    border-radius: 8px;
+    background: #f9fbfe;
+    padding: 10px;
+    cursor: grab;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .token:hover, .token:focus-visible {
+    transform: translateY(-2px);
+    border-color: #5b78d6;
+    box-shadow: 0 6px 18px rgba(91, 120, 214, .16);
+    outline: none;
+  }
+
+  .token:active {
+    cursor: grabbing;
+  }
+
+  .token-code {
+    display: block;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: .95rem;
+    color: #17324d;
+    margin-bottom: 8px;
+    overflow-wrap: anywhere;
+  }
+
+  .token-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font: 600 .78rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    border: 1px solid #cbd7e5;
+    background: #fff;
+    color: #304157;
+    border-radius: 7px;
+    padding: 7px 9px;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+
+  button:hover {
+    border-color: #4f7df3;
+    color: #315bcc;
+    background: #f3f6ff;
+  }
+
+  .reset-btn {
+    margin-top: 14px;
+    width: 100%;
+  }
+
+  .lab {
+    padding: 16px;
+    display: grid;
+    gap: 16px;
+  }
+
+  .dropzones {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .zone {
+    min-height: 260px;
+    border: 2px dashed #c6d2e2;
+    border-radius: 8px;
+    padding: 14px;
+    background: #fbfcff;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+
+  .zone.drag-over {
+    border-color: #4f7df3;
+    background: #f1f5ff;
+    transform: translateY(-2px);
+  }
+
+  .zone-header {
+    display: grid;
+    gap: 4px;
+  }
+
+  .zone-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #20314c;
+  }
+
+  .symbol {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #eaf0ff;
+    color: #315bcc;
+    font-family: Consolas, "Courier New", monospace;
+    font-weight: 700;
+  }
+
+  .zone-note {
+    margin: 0;
+    color: #59677a;
+    line-height: 1.45;
+    font-size: .9rem;
+  }
+
+  .slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 78px;
+    align-content: flex-start;
+  }
+
+  .slot {
+    border: 1px solid #cad6e5;
+    background: #fff;
+    color: #17324d;
+    border-radius: 7px;
+    padding: 8px 9px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: .9rem;
+    position: relative;
+    animation: land .22s ease;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+
+  .slot::before {
+    content: attr(data-label);
+    display: block;
+    color: #6b7788;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: .68rem;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+
+  @keyframes land {
+    from { transform: translateY(-8px); opacity: .25; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .literal {
+    margin-top: auto;
+    background: #1f2937;
+    color: #f8fafc;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 68px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: .86rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .inspector {
+    display: grid;
+    gap: 12px;
+  }
+
+  .inspector-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metric {
+    border-left: 4px solid #5b78d6;
+    background: #f7f9fd;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .metric strong {
+    display: block;
+    color: #20314c;
+    margin-bottom: 4px;
+  }
+
+  .metric span {
+    color: #536173;
+    font-size: .88rem;
+    line-height: 1.4;
+  }
+
+  .compare table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+  }
+
+  .compare th, .compare td {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 1px solid #e5ebf3;
+    vertical-align: top;
+  }
+
+  .compare th {
+    color: #20314c;
+    font-size: .82rem;
+  }
+
+  .compare td {
+    color: #536173;
+    line-height: 1.4;
+  }
+
+  .compare code {
+    color: #20314c;
+    background: #eef3fb;
+    padding: 2px 5px;
+    border-radius: 5px;
+  }
+
+  @media (max-width: 920px) {
+    .workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .dropzones {
+      grid-template-columns: 1fr;
+    }
+
+    .zone {
+      min-height: 210px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    main {
+      padding: 92px 12px 24px;
+    }
+
+    .corner-controls {
+      left: 10px;
+      right: auto;
+      flex-wrap: wrap;
+    }
+
+    .inspector-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .compare {
+      overflow-x: auto;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="corner-controls">
+  <a href="index.html" class="back-to-index">&larr; Back to index</a>
+  <div class="verify-badge" data-verified="false" data-author="jdVegaS24"></div>
+</div>
+
+<main>
+  <header>
+    <h1>Estructuras basicas de Python</h1>
+    <p class="subtitle">Mueve datos hacia <code>list</code>, <code>tuple</code> o <code>dict</code> y observa como cambia su forma, su acceso y su uso tipico en ciencia de datos.</p>
+  </header>
+
+  <div class="workspace">
+    <section class="bank" aria-labelledby="bank-title">
+      <h2 id="bank-title">Datos disponibles</h2>
+      <div class="token-list" id="tokenList"></div>
+      <button type="button" class="reset-btn" id="resetBtn">Reiniciar contenedores</button>
+    </section>
+
+    <section class="lab" aria-label="Laboratorio de estructuras Python">
+      <div class="dropzones" id="dropzones">
+        <article class="zone" data-target="list" aria-label="Zona list">
+          <div class="zone-header">
+            <div class="zone-title"><span class="symbol">[]</span> list</div>
+            <p class="zone-note">Ordenada, mutable y buena para colecciones que crecen o se transforman.</p>
+          </div>
+          <div class="slots" id="listSlots"></div>
+          <pre class="literal" id="listLiteral"></pre>
+        </article>
+
+        <article class="zone" data-target="tuple" aria-label="Zona tuple">
+          <div class="zone-header">
+            <div class="zone-title"><span class="symbol">()</span> tuple</div>
+            <p class="zone-note">Ordenada e inmutable. Conviene para pares, coordenadas o registros fijos.</p>
+          </div>
+          <div class="slots" id="tupleSlots"></div>
+          <pre class="literal" id="tupleLiteral"></pre>
+        </article>
+
+        <article class="zone" data-target="dict" aria-label="Zona dict">
+          <div class="zone-header">
+            <div class="zone-title"><span class="symbol">{}</span> dict</div>
+            <p class="zone-note">Asocia claves con valores. Es natural para representar filas con nombres de columnas.</p>
+          </div>
+          <div class="slots" id="dictSlots"></div>
+          <pre class="literal" id="dictLiteral"></pre>
+        </article>
+      </div>
+
+      <section class="inspector" aria-live="polite">
+        <h2>Lectura del momento</h2>
+        <div class="inspector-grid">
+          <div class="metric">
+            <strong id="selectedName">Sin seleccion</strong>
+            <span id="selectedUse">Elige un dato y una estructura para ver una recomendacion contextual.</span>
+          </div>
+          <div class="metric">
+            <strong>Acceso</strong>
+            <span id="selectedAccess">Una lista o tupla usa posicion; un diccionario usa clave.</span>
+          </div>
+          <div class="metric">
+            <strong>Propiedad clave</strong>
+            <span id="selectedProperty">La diferencia fuerte aparece cuando quieres modificar o explicar el dato.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="compare" aria-labelledby="compare-title">
+        <h2 id="compare-title">Comparacion rapida</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Estructura</th>
+              <th>Forma</th>
+              <th>Fortaleza</th>
+              <th>Uso en datos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>list</code></td>
+              <td>Secuencia editable</td>
+              <td>Agregar, borrar, ordenar, filtrar</td>
+              <td>Muchas observaciones, valores de una columna, resultados de un loop</td>
+            </tr>
+            <tr>
+              <td><code>tuple</code></td>
+              <td>Secuencia fija</td>
+              <td>Proteger una combinacion que no debe cambiar</td>
+              <td>Coordenadas, dimensiones, pares <code>(x, y)</code>, claves compuestas</td>
+            </tr>
+            <tr>
+              <td><code>dict</code></td>
+              <td>Claves y valores</td>
+              <td>Nombrar cada campo y leer por significado</td>
+              <td>Una fila de dataset, configuraciones, conteos por categoria</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </section>
+  </div>
+</main>
+
+<script>
+const dataItems = [
+  { id: "name", key: "nombre", label: "Nombre", value: "Ana", type: "str", list: '"Ana"', tuple: '"Ana"', dict: '"nombre": "Ana"' },
+  { id: "age", key: "edad", label: "Edad", value: 23, type: "int", list: "23", tuple: "23", dict: '"edad": 23' },
+  { id: "city", key: "ciudad", label: "Ciudad", value: "Quito", type: "str", list: '"Quito"', tuple: '"Quito"', dict: '"ciudad": "Quito"' },
+  { id: "score", key: "nota", label: "Nota", value: 8.7, type: "float", list: "8.7", tuple: "8.7", dict: '"nota": 8.7' },
+  { id: "coord", key: "punto", label: "Punto", value: "(1.4, 2.1)", type: "tuple", list: "(1.4, 2.1)", tuple: "(1.4, 2.1)", dict: '"punto": (1.4, 2.1)' }
+];
+
+const state = {
+  list: [],
+  tuple: [],
+  dict: []
+};
+
+const advice = {
+  list: {
+    access: "Usa indices: datos[0], datos[1], datos[2]. El significado depende del orden.",
+    property: "Mutable: puedes hacer append, pop, sort o reemplazar posiciones.",
+    use: "Buena eleccion cuando tienes una coleccion ordenada de elementos similares o resultados acumulados."
+  },
+  tuple: {
+    access: "Usa indices igual que una lista: punto[0], punto[1].",
+    property: "Inmutable: despues de creada, la combinacion queda fija.",
+    use: "Buena eleccion cuando varios valores forman una unidad estable, como coordenadas o dimensiones."
+  },
+  dict: {
+    access: 'Usa claves con significado: fila["edad"], fila["ciudad"].',
+    property: "Mutable y explicita: puedes cambiar valores sin depender de la posicion.",
+    use: "Buena eleccion para una fila de datos, una configuracion o una tabla convertida a registros."
+  }
+};
+
+const tokenList = document.getElementById("tokenList");
+const selectedName = document.getElementById("selectedName");
+const selectedUse = document.getElementById("selectedUse");
+const selectedAccess = document.getElementById("selectedAccess");
+const selectedProperty = document.getElementById("selectedProperty");
+
+function renderTokens() {
+  tokenList.innerHTML = "";
+  dataItems.forEach((item) => {
+    const token = document.createElement("div");
+    token.className = "token";
+    token.draggable = true;
+    token.dataset.id = item.id;
+    token.setAttribute("role", "group");
+    token.setAttribute("aria-label", `${item.label}, tipo ${item.type}`);
+    token.innerHTML = `
+      <code class="token-code">${item.label}: ${formatValue(item.value)}</code>
+      <div class="token-actions">
+        <button type="button" data-send="list" data-id="${item.id}">a list</button>
+        <button type="button" data-send="tuple" data-id="${item.id}">a tuple</button>
+        <button type="button" data-send="dict" data-id="${item.id}">a dict</button>
+      </div>
+    `;
+    token.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", item.id);
+      event.dataTransfer.effectAllowed = "copy";
+    });
+    tokenList.appendChild(token);
+  });
+}
+
+function formatValue(value) {
+  return typeof value === "string" && !value.startsWith("(") ? `"${value}"` : String(value);
+}
+
+function addTo(target, id) {
+  const item = dataItems.find((entry) => entry.id === id);
+  if (!item || state[target].includes(id)) return;
+  state[target].push(id);
+  updateAll(target, item);
+}
+
+function updateAll(target, item) {
+  renderContainer("list");
+  renderContainer("tuple");
+  renderContainer("dict");
+  selectedName.textContent = `${item.label} en ${target}`;
+  selectedUse.textContent = advice[target].use;
+  selectedAccess.textContent = advice[target].access;
+  selectedProperty.textContent = advice[target].property;
+}
+
+function renderContainer(target) {
+  const slots = document.getElementById(`${target}Slots`);
+  const literal = document.getElementById(`${target}Literal`);
+  slots.innerHTML = "";
+
+  state[target].forEach((id, index) => {
+    const item = dataItems.find((entry) => entry.id === id);
+    const slot = document.createElement("div");
+    slot.className = "slot";
+    slot.dataset.label = target === "dict" ? item.key : `indice ${index}`;
+    slot.textContent = target === "dict" ? item.dict : item[target];
+    slots.appendChild(slot);
+  });
+
+  literal.textContent = buildLiteral(target);
+}
+
+function buildLiteral(target) {
+  if (target === "list") {
+    return `datos = [${state.list.map(id => dataItems.find(item => item.id === id).list).join(", ")}]`;
+  }
+  if (target === "tuple") {
+    const values = state.tuple.map(id => dataItems.find(item => item.id === id).tuple);
+    const suffix = values.length === 1 ? "," : "";
+    return `registro = (${values.join(", ")}${suffix})`;
+  }
+  const pairs = state.dict.map(id => dataItems.find(item => item.id === id).dict);
+  return `fila = {${pairs.join(", ")}}`;
+}
+
+document.querySelectorAll(".zone").forEach((zone) => {
+  zone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    zone.classList.add("drag-over");
+  });
+  zone.addEventListener("dragleave", () => {
+    zone.classList.remove("drag-over");
+  });
+  zone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    zone.classList.remove("drag-over");
+    addTo(zone.dataset.target, event.dataTransfer.getData("text/plain"));
+  });
+});
+
+tokenList.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-send]");
+  if (!button) return;
+  addTo(button.dataset.send, button.dataset.id);
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  state.list = [];
+  state.tuple = [];
+  state.dict = [];
+  renderContainer("list");
+  renderContainer("tuple");
+  renderContainer("dict");
+  selectedName.textContent = "Sin seleccion";
+  selectedUse.textContent = "Elige un dato y una estructura para ver una recomendacion contextual.";
+  selectedAccess.textContent = "Una lista o tupla usa posicion; un diccionario usa clave.";
+  selectedProperty.textContent = "La diferencia fuerte aparece cuando quieres modificar o explicar el dato.";
+});
+
+renderTokens();
+renderContainer("list");
+renderContainer("tuple");
+renderContainer("dict");
+</script>
+</body>
+</html>
