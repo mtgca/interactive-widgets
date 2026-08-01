@@ -1,4 +1,4 @@
-# Interactive Widgets
+﻿# Interactive Widgets
 
 Interactive HTML widgets created by AI for teaching Computer Science and related courses — Machine Learning, Artificial Intelligence, and other CS topics. Each widget is a self-contained demo — no installation required. Click any link below to open it directly in your browser.
 
@@ -10,7 +10,7 @@ Hosted on GitHub Pages: **https://mtgca.github.io/interactive-widgets/**
 
 | Widget | Topic | Author | Status | Description |
 |--------|-------|--------|--------|-------------|
-| [Python Lists: Interactive Explorer](https://mtgca.github.io/interactive-widgets/python_lists_interactive.html) | CS / Python Fundamentals | [@jdVegaS24](https://github.com/jdVegaS24) | ⚠️ AI-only | Drag-and-drop list playground — append, insert, pop, slice, and reorder elements with real animated movement. Includes a mini-batch sampler that shuffles and slices the list into training batches, just like a PyTorch DataLoader feeding an optimizer. |
+| [POO en Python e Intro a Micrograd](https://mtgca.github.io/interactive-widgets/poo_micrograd_interactive.html) | CS / Python / ML | [@jdVegaS24](https://github.com/jdVegaS24) | ⚠️ AI-only | Interactive tabs for the Dia 4 class: objects, classes, self, scikit-learn objects, object inspection, inheritance, operator overloading, the Value class, and computational graphs. |
 | [Pandas DataFrame Workflow](https://mtgca.github.io/interactive-widgets/pandas_dataframe_workflow_interactive.html) | CS / Python / Data | [@jdVegaS24](https://github.com/jdVegaS24) | ⚠️ AI-only | Interactive tabs for the Día 3 pandas micro-lab: inspection, selection, filters, new columns, groupby, missing values, merge, Parquet, CSV-to-insight flow, live cheat sheet, and interactive data-source examples including Kaggle. |
 | [Python Structures and NumPy Workflow](https://mtgca.github.io/interactive-widgets/python_structures_data_workflow_interactive.html) | CS / Python | [@jdVegaS24](https://github.com/jdVegaS24) | ⚠️ AI-only | Interactive tabs for Python lists, tuples, dictionaries, sets, CSV access patterns, NumPy arrays, broadcasting, and linear algebra. |
 | [LLM Next-Word Prediction](https://mtgca.github.io/interactive-widgets/llmpretraining.html) | AI / LLMs | [@mtgca](https://github.com/mtgca) | ✅ Verified | Visualizes LLM pretraining via next-token prediction over text corpus. |
