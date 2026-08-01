@@ -57,6 +57,8 @@
   th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:var(--row);}
   tr:last-child td{border-bottom:none;}
   tbody tr.highlight td{background:var(--accent-soft);}
+  tbody tr.motion-row td{position:relative;overflow:hidden;animation:rowGlow .75s ease;}
+  tbody tr.motion-row td::after{content:"";position:absolute;inset:0 auto 0 -45%;width:45%;background:linear-gradient(90deg,transparent,rgba(79,125,243,.24),transparent);animation:cellSweep .9s ease forwards;}
   td.num{text-align:right;font-variant-numeric:tabular-nums;}
   .col-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
   .chip{border:1px solid var(--border);background:var(--row);color:var(--ink);border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;}
@@ -65,13 +67,15 @@
   .chip.text{border-color:#d0bfff;background:var(--purple-soft);}
   .bar-row{display:grid;grid-template-columns:92px 1fr 52px;gap:8px;align-items:center;margin:9px 0;font-size:13px;}
   .bar-track{height:18px;border-radius:999px;background:var(--row);border:1px solid var(--border);overflow:hidden;}
-  .bar-fill{height:100%;background:var(--accent);border-radius:999px;transition:width .2s ease;}
+  .bar-fill{height:100%;background:var(--accent);border-radius:999px;transition:width .2s ease;position:relative;overflow:hidden;}
+  .bar-fill::after{content:"";position:absolute;inset:0 auto 0 -35%;width:35%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:cellSweep 1.1s ease forwards;}
   .join-area{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0;}
   .merge-note{border:1px solid var(--border);background:var(--row);border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.4;color:var(--ink);max-width:560px;}
   .merge-note b{font-weight:800;color:var(--accent);}
   .mini-title{font-weight:800;font-size:13px;margin:0 0 6px;color:var(--muted);}
   .diagram{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0;}
   .node{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--row);font-weight:700;font-size:13px;}
+  .node.motion-node{animation:nodePulse .75s ease;}
   .arrow{color:var(--muted);font-weight:800;}
   .footer-note{text-align:center;color:var(--muted);font-size:12px;margin-top:8px;}
   .flow-steps{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:12px 0 16px;}
@@ -99,6 +103,17 @@
   .source-guide .code{margin-top:12px;}
   .source-extra{margin-top:12px;border:1px solid var(--border);background:var(--row);border-radius:10px;padding:10px;font-size:13px;line-height:1.5;}
   .source-extra pre{margin:0;font-family:Consolas,"SF Mono",Menlo,monospace;white-space:pre-wrap;}
+  .motion-host{position:relative;overflow:hidden;}
+  .motion-dot{position:absolute;width:12px;height:12px;border-radius:999px;background:var(--accent);box-shadow:0 0 10px var(--accent);opacity:0;pointer-events:none;}
+  .motion-dot.filter{left:12px;top:12px;animation:dotAcross .9s ease forwards;}
+  .motion-dot.merge-left{left:18%;top:8px;animation:mergeTravel .95s ease forwards;}
+  .motion-dot.merge-right{left:56%;top:8px;animation:mergeTravel .95s ease forwards;}
+  .flow-step.pulse,.source-btn.pulse,.question-card.pulse,.chip.pulse,.kpi.pulse{animation:nodePulse .7s ease;}
+  @keyframes cellSweep{from{transform:translateX(0);}to{transform:translateX(330%);}}
+  @keyframes rowGlow{0%{filter:none;}45%{filter:drop-shadow(0 0 7px rgba(79,125,243,.35));}100%{filter:none;}}
+  @keyframes nodePulse{0%{box-shadow:none;transform:scale(1);}45%{box-shadow:0 0 0 5px rgba(79,125,243,.16);transform:scale(1.015);}100%{box-shadow:none;transform:scale(1);}}
+  @keyframes dotAcross{0%{opacity:0;transform:translateX(0) scale(.5);}18%{opacity:1;}100%{opacity:0;transform:translateX(280px) scale(1.1);}}
+  @keyframes mergeTravel{0%{opacity:0;transform:translateY(0) scale(.5);}20%{opacity:1;}100%{opacity:0;transform:translateY(170px) scale(1.15);}}
   @media (max-width:780px){.two-col,.three-col,.join-area,.flow-output,.question-grid,.source-meta{grid-template-columns:1fr;}.flow-steps,.source-grid{grid-template-columns:repeat(2,1fr);}h1{font-size:24px;margin-top:58px}.corner-controls{left:10px;right:auto}.tab{font-size:12px;padding:7px 10px}.bar-row{grid-template-columns:80px 1fr 46px}}
 </style>
 </head>
@@ -497,8 +512,25 @@ let hasArea = false, hasSize = false, missingOn = false, missingFilled = false;
 function fmt(v){ return typeof v === 'number' ? Number(v).toFixed(v % 1 === 0 ? 0 : 1) : (v == null ? 'NaN' : v); }
 function mean(vals){ const xs = vals.filter(v => typeof v === 'number' && !Number.isNaN(v)); return xs.reduce((a,b)=>a+b,0)/Math.max(xs.length,1); }
 function table(rows, cols, opts={}){
-  const body = rows.map((r,i)=>`<tr class="${opts.highlight && opts.highlight(r,i) ? 'highlight' : ''}">${cols.map(c=>`<td class="${typeof r[c] === 'number' ? 'num' : ''}">${fmt(r[c])}</td>`).join('')}</tr>`).join('');
+  const body = rows.map((r,i)=>{
+    const classes = [opts.highlight && opts.highlight(r,i) ? 'highlight' : '', i < 6 ? 'motion-row' : ''].filter(Boolean).join(' ');
+    return `<tr class="${classes}" style="animation-delay:${Math.min(i*45,360)}ms">${cols.map(c=>`<td class="${typeof r[c] === 'number' ? 'num' : ''}">${fmt(r[c])}</td>`).join('')}</tr>`;
+  }).join('');
   return `<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function pulse(el){
+  if(!el) return;
+  el.classList.remove('pulse','motion-node');
+  void el.getBoundingClientRect();
+  if(el.classList.contains('node')) el.classList.add('motion-node'); else el.classList.add('pulse');
+}
+function spawnDot(parent, type){
+  if(!parent) return;
+  parent.classList.add('motion-host');
+  const dot = document.createElement('span');
+  dot.className = `motion-dot ${type}`;
+  parent.appendChild(dot);
+  setTimeout(()=>dot.remove(), 1100);
 }
 function updateTab(id){ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id)); document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id===id)); }
 
@@ -553,6 +585,8 @@ function renderSelect(){
   document.getElementById('columnChips').innerHTML = allCols.map(c=>`<button class="chip ${numericCols.includes(c)||c==='id'?'numeric':'text'} ${selectedCols.includes(c)?'active':''}" data-col="${c}">${c}</button>`).join('');
   document.getElementById('selectTable').innerHTML = table(df.slice(0,7), selectedCols);
   document.getElementById('selectCode').textContent = selectedCols.length === 1 ? `df["${selectedCols[0]}"]\n# Una columna: devuelve una Series` : `df[[${selectedCols.map(c=>'"'+c+'"').join(', ')}]]\n# Varias columnas: devuelve un DataFrame`;
+  document.querySelectorAll('#columnChips .active').forEach(pulse);
+  spawnDot(document.getElementById('selectTable'),'filter');
 }
 document.getElementById('columnChips').addEventListener('click', e=>{ const c=e.target.dataset.col; if(!c)return; selectedCols.includes(c) ? selectedCols=selectedCols.filter(x=>x!==c) : selectedCols.push(c); if(selectedCols.length===0) selectedCols=[c]; renderSelect(); });
 document.getElementById('selectOne').addEventListener('click',()=>{ selectedCols=['petal_length']; renderSelect(); });
@@ -566,18 +600,20 @@ function renderFilter(){
   document.getElementById('filterRows').textContent=rows.length; document.getElementById('filterPct').textContent=Math.round(rows.length/df.length*100)+'%'; document.getElementById('filterMean').textContent=mean(rows.map(r=>r[col])).toFixed(2);
   document.getElementById('filterTable').innerHTML=table(rows, allCols, {highlight:r=>compare(r[col],op,val)});
   document.getElementById('filterCode').textContent=`grandes = df[df["${col}"] ${op} ${val.toFixed(1)}]\nprint(len(grandes))`;
+  ['filterRows','filterPct','filterMean'].forEach(id=>pulse(document.getElementById(id).closest('.kpi')));
+  spawnDot(document.getElementById('filterTable'),'filter');
 }
 ['filterCol','filterOp','filterVal'].forEach(id=>document.getElementById(id).addEventListener('input', renderFilter));
 
 function rebuildDf(){ df = baseRows.map(r=>({...r})); if(missingOn){ df[2].sepal_width=null; df[6].petal_width=null; df[9].petal_length=null; } if(missingFilled){ numericCols.forEach(c=>{ const m=mean(df.map(r=>r[c])); df.forEach(r=>{ if(r[c]==null) r[c]=Number(m.toFixed(1)); }); }); } if(hasArea){ df.forEach(r=>{ r.area_petal = r.petal_length==null||r.petal_width==null ? null : Number((r.petal_length*r.petal_width).toFixed(2)); }); } if(hasSize){ df.forEach(r=>{ r.tamaño = r.petal_length==null ? 'desconocida' : (r.petal_length>4.0 ? 'grande' : 'pequeña'); }); } }
 function transformCols(){ return [...allCols, ...(hasArea?['area_petal']:[]), ...(hasSize?['tamaño']:[])]; }
 function renderTransform(){ rebuildDf(); document.getElementById('transformTable').innerHTML=table(df.slice(0,8), transformCols()); let code=[]; if(hasArea) code.push('df["area_petal"] = df["petal_length"] * df["petal_width"]'); if(hasSize) code.push('df["tamaño"] = df["petal_length"].apply(lambda x: "grande" if x > 4.0 else "pequeña")'); if(missingOn) code.push('df.isna().sum()'); if(missingFilled) code.push('df = df.fillna(df.mean(numeric_only=True))'); document.getElementById('transformCode').textContent=code.join('\n') || '# Activa una transformación para ver el código pandas equivalente'; const miss=numericCols.map(c=>({col:c,n:df.filter(r=>r[c]==null).length})); document.getElementById('missingDiagram').innerHTML=miss.map(m=>`<span class="node">${m.col}: ${m.n} NaN</span>`).join('<span class="arrow">→</span>'); renderFilter(); renderGroup(); }
-document.getElementById('addArea').addEventListener('click',()=>{ hasArea=!hasArea; renderTransform(); });
-document.getElementById('addSize').addEventListener('click',()=>{ hasSize=!hasSize; renderTransform(); });
-document.getElementById('toggleMissing').addEventListener('click',()=>{ missingOn=!missingOn; if(!missingOn) missingFilled=false; renderTransform(); });
-document.getElementById('fillMissing').addEventListener('click',()=>{ missingOn=true; missingFilled=true; renderTransform(); });
+document.getElementById('addArea').addEventListener('click',()=>{ hasArea=!hasArea; renderTransform(); spawnDot(document.getElementById('transformTable'),'filter'); });
+document.getElementById('addSize').addEventListener('click',()=>{ hasSize=!hasSize; renderTransform(); spawnDot(document.getElementById('transformTable'),'filter'); });
+document.getElementById('toggleMissing').addEventListener('click',()=>{ missingOn=!missingOn; if(!missingOn) missingFilled=false; renderTransform(); document.querySelectorAll('#missingDiagram .node').forEach(pulse); });
+document.getElementById('fillMissing').addEventListener('click',()=>{ missingOn=true; missingFilled=true; renderTransform(); document.querySelectorAll('#missingDiagram .node').forEach(pulse); });
 
-function renderGroup(){ const metric=document.getElementById('metricCol').value, agg=document.getElementById('aggFn').value; const groups=[...new Set(df.map(r=>r.species))]; const rows=groups.map(g=>{ const vals=df.filter(r=>r.species===g).map(r=>r[metric]).filter(v=>v!=null); let value=agg==='mean'?mean(vals):agg==='max'?Math.max(...vals):agg==='min'?Math.min(...vals):vals.length; return {species:g,[agg+'_'+metric]:Number(value.toFixed ? value.toFixed(2) : value)}; }); const valKey=agg+'_'+metric; const maxv=Math.max(...rows.map(r=>r[valKey])); document.getElementById('bars').innerHTML=rows.map(r=>`<div class="bar-row"><span>${r.species}</span><div class="bar-track"><div class="bar-fill" style="width:${(r[valKey]/maxv*100).toFixed(1)}%"></div></div><b>${r[valKey]}</b></div>`).join(''); document.getElementById('groupTable').innerHTML=table(rows,['species',valKey]); document.getElementById('groupCode').textContent=`resumen = df.groupby("species")[["${metric}"]].${agg}()\nprint(resumen)`; }
+function renderGroup(){ const metric=document.getElementById('metricCol').value, agg=document.getElementById('aggFn').value; const groups=[...new Set(df.map(r=>r.species))]; const rows=groups.map(g=>{ const vals=df.filter(r=>r.species===g).map(r=>r[metric]).filter(v=>v!=null); let value=agg==='mean'?mean(vals):agg==='max'?Math.max(...vals):agg==='min'?Math.min(...vals):vals.length; return {species:g,[agg+'_'+metric]:Number(value.toFixed ? value.toFixed(2) : value)}; }); const valKey=agg+'_'+metric; const maxv=Math.max(...rows.map(r=>r[valKey])); document.getElementById('bars').innerHTML=rows.map(r=>`<div class="bar-row"><span>${r.species}</span><div class="bar-track"><div class="bar-fill" style="width:${(r[valKey]/maxv*100).toFixed(1)}%"></div></div><b>${r[valKey]}</b></div>`).join(''); document.getElementById('groupTable').innerHTML=table(rows,['species',valKey]); document.getElementById('groupCode').textContent=`resumen = df.groupby("species")[["${metric}"]].${agg}()\nprint(resumen)`; spawnDot(document.getElementById('bars'),'filter'); }
 ['metricCol','aggFn'].forEach(id=>document.getElementById(id).addEventListener('input', renderGroup));
 
 const leftRows=[{student_id:1,nombre:'Ana',carrera:'IA'},{student_id:2,nombre:'Luis',carrera:'Datos'},{student_id:3,nombre:'Maya',carrera:'IA'},{student_id:4,nombre:'Juan',carrera:'Software'}];
@@ -604,6 +640,9 @@ function renderMerge(){
   document.getElementById('mergeCode').textContent=`df_final = estudiantes.merge(participacion, on="student_id", how="${type}")
 df_final.to_parquet("estudiantes_procesado.parquet")
 df_check = pd.read_parquet("estudiantes_procesado.parquet")`;
+  spawnDot(document.getElementById('mergeTable'),'merge-left');
+  spawnDot(document.getElementById('mergeTable'),'merge-right');
+  pulse(document.getElementById('mergeNote'));
 }
 document.getElementById('joinType').addEventListener('input', renderMerge);
 
@@ -630,6 +669,8 @@ function renderFlow(){
   } else {
     document.getElementById('flowBars').innerHTML = '';
   }
+  pulse(document.querySelector(`[data-flow="${activeFlow}"]`));
+  spawnDot(document.getElementById('flowTable'),'filter');
 }
 document.getElementById('flowSteps').addEventListener('click', e=>{ const b=e.target.closest('[data-flow]'); if(!b)return; activeFlow=b.dataset.flow; renderFlow(); });
 
@@ -657,6 +698,7 @@ function renderCheat(){
   const c = cheats.find(x=>x.op===activeCheat) || cheats[0];
   document.getElementById('cheatCode').textContent = `${c.code}\n\n# ${c.out}`;
   document.getElementById('questionGrid').innerHTML = questions.map(q=>`<button class="question-card ${q.pick===activeCheat?'active':''}" data-op="${q.pick}">${q.text}</button>`).join('');
+  pulse(document.querySelector(`[data-op="${activeCheat}"]`));
 }
 document.getElementById('cheatRows').addEventListener('click', e=>{ const tr=e.target.closest('[data-op]'); if(!tr)return; activeCheat=tr.dataset.op; renderCheat(); });
 document.getElementById('questionGrid').addEventListener('click', e=>{ const q=e.target.closest('[data-op]'); if(!q)return; activeCheat=q.dataset.op; renderCheat(); });
@@ -739,6 +781,8 @@ function renderSources(){
   document.getElementById('sourceCode').textContent = src.code;
   document.getElementById('sourcePreview').innerHTML = table(src.rows, src.cols);
   document.getElementById('sourceExtra').innerHTML = src.extra || '';
+  pulse(document.querySelector(`[data-source="${activeSource}"]`));
+  spawnDot(document.getElementById('sourcePreview'),'filter');
 }
 document.getElementById('sourceGrid').addEventListener('click', e=>{ const btn=e.target.closest('[data-source]'); if(!btn)return; activeSource=btn.dataset.source; renderSources(); });
 function init(){ document.getElementById('filterCol').innerHTML=numericCols.map(c=>`<option value="${c}">${c}</option>`).join(''); document.getElementById('filterCol').value='petal_length'; document.getElementById('metricCol').innerHTML=numericCols.map(c=>`<option value="${c}">${c}</option>`).join(''); document.getElementById('metricCol').value='petal_length'; renderLoadCode(); renderExplore(); renderSelect(); renderFilter(); renderTransform(); renderGroup(); renderMerge(); renderFlow(); renderCheat(); renderSources(); }

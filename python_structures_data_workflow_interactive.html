@@ -221,6 +221,17 @@
   .array-cell{
     min-width:50px; padding:10px 12px; border:1.5px solid #c7d6fb; border-radius:8px;
     background:var(--accent-soft); text-align:center; font-weight:700; animation:pop var(--anim-speed) ease;
+    position:relative; overflow:hidden;
+  }
+  .array-row.motion-row .array-cell::after,.matrix-grid.motion-row .matrix-cell::after{
+    content:""; position:absolute; inset:0 auto 0 -45%; width:45%; opacity:.75;
+    background:linear-gradient(90deg, transparent, rgba(79,125,243,.34), transparent);
+    animation:cellSweep .9s ease forwards;
+  }
+  .array-row.stream,.matrix-vis.stream,.matrix-grid.stream{position:relative;}
+  .array-row.stream::before,.matrix-vis.stream::before{
+    content:""; position:absolute; top:-8px; left:0; width:10px; height:10px; border-radius:999px;
+    background:var(--accent); box-shadow:0 0 10px var(--accent); animation:rowTravel 1.05s ease forwards;
   }
   .array-cell.bool{background:#fff9db; border-color:#ffe066;}
   .array-cell.pick{background:#e6fcf0; border-color:#b2f2ce;}
@@ -228,6 +239,7 @@
   .matrix-cell{
     width:58px; min-height:42px; display:grid; place-items:center; border-radius:7px;
     border:1.5px solid #c7d6fb; background:var(--accent-soft); font-weight:700;
+    position:relative; overflow:hidden;
   }
   .matrix-cell.added{background:#e6fcf0; border-color:#b2f2ce;}
   .matrix-cell.vector{background:#fff9db; border-color:#ffe066;}
@@ -244,6 +256,10 @@
   body.dark textarea.csv-text, body.dark .op input, body.dark .op select, body.dark .access-controls input{background:#111827;color:var(--ink);}
   body.dark .score-pill{background:#111827;}
   .mini-cols{display:grid; grid-template-columns:repeat(2,1fr); gap:14px;}
+  @keyframes cellSweep{from{transform:translateX(0);}to{transform:translateX(330%);}}
+  @keyframes rowTravel{0%{opacity:0; transform:translateX(0) scale(.6);}15%{opacity:1;}100%{opacity:0; transform:translateX(280px) scale(1.1);}}
+  @keyframes softGlow{0%{box-shadow:none;}45%{box-shadow:0 0 0 5px rgba(79,125,243,.16);}100%{box-shadow:none;}}
+  .motion-glow{animation:softGlow .75s ease;}
 
   @media (max-width:820px){
     .two-col,.explain-grid,.decision,.csv-box,.access-grid,.mini-cols,.top-tools{grid-template-columns:1fr;}
@@ -1231,9 +1247,13 @@ function parseNums(text){
 function drawArray(id, arr, extraClass = ""){
   const host = document.getElementById(id);
   host.innerHTML = "";
-  arr.forEach(value => {
+  host.classList.remove("motion-row", "stream", "motion-glow");
+  void host.getBoundingClientRect();
+  host.classList.add("motion-row", "stream", "motion-glow");
+  arr.forEach((value, idx) => {
     const cell = document.createElement("div");
     cell.className = "array-cell " + extraClass;
+    cell.style.animationDelay = `${Math.min(idx * 45, 360)}ms`;
     cell.textContent = typeof value === "number" ? Number(value.toFixed ? value.toFixed(3) : value) : String(value);
     host.appendChild(cell);
   });
@@ -1242,20 +1262,24 @@ function drawArray(id, arr, extraClass = ""){
 function drawSetBefore(id, arr){
   const host = document.getElementById(id);
   host.innerHTML = "";
+  host.classList.remove("motion-row", "stream", "motion-glow");
+  void host.getBoundingClientRect();
+  host.classList.add("motion-row", "stream", "motion-glow");
   const seen = new Set();
-  arr.forEach(value => {
+  arr.forEach((value, idx) => {
     const duplicate = seen.has(value);
     seen.add(value);
     const cell = document.createElement("div");
     cell.className = "array-cell" + (duplicate ? " duplicate" : "");
+    cell.style.animationDelay = `${Math.min(idx * 45, 360)}ms`;
     cell.textContent = value;
     host.appendChild(cell);
   });
 }
 
 function matrixHtml(matrix, cols, extra = ""){
-  return `<div class="matrix-grid" style="grid-template-columns:repeat(${cols},58px)">` +
-    matrix.flat().map(value => `<div class="matrix-cell ${extra}">${typeof value === "number" ? Number(value.toFixed(3)) : value}</div>`).join("") +
+  return `<div class="matrix-grid motion-row" style="grid-template-columns:repeat(${cols},58px)">` +
+    matrix.flat().map((value, idx) => `<div class="matrix-cell ${extra}" style="animation-delay:${Math.min(idx * 35, 320)}ms">${typeof value === "number" ? Number(value.toFixed(3)) : value}</div>`).join("") +
     `</div>`;
 }
 
