@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pandas DataFrame Workflow</title>
+<style>
+  :root{
+    --bg:#f8f9fb; --card:#ffffff; --ink:#2d3436; --muted:#6b7684;
+    --accent:#4f7df3; --accent-soft:#e8effe; --good:#2f9e44; --good-soft:#e6fcf0;
+    --warn:#e8a800; --warn-soft:#fff9db; --bad:#d9480f; --bad-soft:#fff4e6;
+    --border:#e1e6ef; --code:#1e1f29; --row:#fafbfe; --purple:#7c3aaa; --purple-soft:#f3e8fd;
+  }
+  body.dark{
+    --bg:#111827; --card:#182234; --ink:#eef2ff; --muted:#b8c2d6;
+    --accent:#8fb1ff; --accent-soft:#25385f; --good:#65d68a; --good-soft:#173522;
+    --warn:#f5c84b; --warn-soft:#3b3214; --bad:#ffad7a; --bad-soft:#3a2417;
+    --border:#344158; --code:#0d111c; --row:#202b40; --purple:#d1a8ff; --purple-soft:#302143;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:24px 16px 56px;}
+  .wrap{max-width:1120px;margin:0 auto;}
+  h1{text-align:center;margin:46px 0 4px;font-size:28px;letter-spacing:0;}
+  .subtitle{text-align:center;color:var(--muted);margin:0 0 20px;font-size:15px;line-height:1.5;}
+  .dataset-link{color:var(--accent);font-weight:700;text-decoration:none;border-bottom:1px solid currentColor;}
+  .dataset-link:hover{filter:brightness(1.12);}
+  .corner-controls{position:fixed;top:10px;right:10px;z-index:20;display:flex;align-items:center;gap:8px;}
+  .back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.15);}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 18px;}
+  .tab{cursor:pointer;border:1px solid #cbd7e5;border-radius:999px;padding:8px 15px;background:#fff;color:#435066;font-weight:700;font-size:13px;}
+  .tab:hover{border-color:var(--accent);color:var(--accent);}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:18px;box-shadow:0 2px 8px rgba(20,30,60,.04);}
+  .card h2{margin:0 0 5px;font-size:17px;}
+  .hint{color:var(--muted);font-size:13px;margin:0 0 14px;line-height:1.5;}
+  .two-col{display:grid;grid-template-columns:1.02fr .98fr;gap:16px;align-items:start;}
+  .three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0;}
+  .control{display:flex;align-items:center;gap:7px;background:var(--row);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+  label{font-size:12px;color:var(--muted);font-weight:700;}
+  select,input{border:1px solid var(--border);border-radius:6px;background:#fff;color:#1f2937;padding:6px 8px;font-size:13px;}
+  input[type="range"]{width:150px;padding:0;}
+  button{cursor:pointer;border:none;border-radius:7px;padding:8px 13px;font-size:13px;font-weight:700;background:var(--accent);color:#fff;}
+  button.secondary{background:#eef1f8;color:#2d3436;border:1px solid #dbe3ef;}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid #cbd7e5;}
+  button.pill{border-radius:999px;}
+  .kpi{border:1px solid var(--border);background:var(--row);border-radius:10px;padding:12px;}
+  .kpi b{display:block;font-size:21px;margin-bottom:3px;}
+  .kpi span{font-size:12px;color:var(--muted);}
+  .code{font-family:Consolas,"SF Mono",Menlo,monospace;background:var(--code);color:#f5f5f7;border-radius:8px;padding:11px 13px;font-size:13px;line-height:1.45;overflow:auto;white-space:pre-wrap;min-height:54px;}
+  .code .comment{color:#9aa0b0;}
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--card);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 9px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+  th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:var(--row);}
+  tr:last-child td{border-bottom:none;}
+  tbody tr.highlight td{background:var(--accent-soft);}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .col-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+  .chip{border:1px solid var(--border);background:var(--row);color:var(--ink);border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;}
+  .chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .chip.numeric{border-color:#b7e4c7;background:var(--good-soft);}
+  .chip.text{border-color:#d0bfff;background:var(--purple-soft);}
+  .bar-row{display:grid;grid-template-columns:92px 1fr 52px;gap:8px;align-items:center;margin:9px 0;font-size:13px;}
+  .bar-track{height:18px;border-radius:999px;background:var(--row);border:1px solid var(--border);overflow:hidden;}
+  .bar-fill{height:100%;background:var(--accent);border-radius:999px;transition:width .2s ease;}
+  .join-area{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0;}
+  .merge-note{border:1px solid var(--border);background:var(--row);border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.4;color:var(--ink);max-width:560px;}
+  .merge-note b{font-weight:800;color:var(--accent);}
+  .mini-title{font-weight:800;font-size:13px;margin:0 0 6px;color:var(--muted);}
+  .diagram{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0;}
+  .node{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--row);font-weight:700;font-size:13px;}
+  .arrow{color:var(--muted);font-weight:800;}
+  .footer-note{text-align:center;color:var(--muted);font-size:12px;margin-top:8px;}
+  .flow-steps{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:12px 0 16px;}
+  .flow-step{border:1px solid var(--border);background:var(--row);border-radius:10px;padding:10px;cursor:pointer;text-align:left;min-height:74px;}
+  .flow-step.active{border-color:var(--accent);background:var(--accent-soft);}
+  .flow-step b{display:block;font-size:13px;margin-bottom:4px;}
+  .flow-step span{display:block;color:var(--muted);font-size:11px;line-height:1.35;}
+  .flow-output{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+  .cheat-table tbody tr{cursor:pointer;}
+  .cheat-table tbody tr:hover td,.cheat-table tbody tr.active td{background:var(--accent-soft);}
+  .question-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px;}
+  .question-card{border:1px solid var(--border);background:var(--row);color:var(--ink);border-radius:9px;padding:10px;cursor:pointer;font-size:13px;line-height:1.4;}
+  .question-card.active{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);}
+  .source-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:12px 0 14px;}
+  .source-btn{border:1px solid var(--border);background:var(--row);color:var(--ink);border-radius:10px;padding:10px;text-align:left;min-height:74px;}
+  .source-btn.active{border-color:var(--accent);background:var(--accent-soft);}
+  .source-btn b{display:block;font-size:13px;margin-bottom:4px;}
+  .source-btn span{display:block;color:var(--muted);font-size:11px;line-height:1.35;}
+  .source-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 14px;}
+  .source-pill{border:1px solid var(--border);border-radius:10px;background:var(--row);padding:10px;font-size:13px;line-height:1.4;}
+  .source-pill b{display:block;margin-bottom:3px;}
+  .source-link{color:var(--accent);font-weight:700;text-decoration:none;border-bottom:1px solid currentColor;}
+  .source-guide{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
+  .source-guide h3{margin:0 0 8px;font-size:16px;}
+  .source-guide .code{margin-top:12px;}
+  .source-extra{margin-top:12px;border:1px solid var(--border);background:var(--row);border-radius:10px;padding:10px;font-size:13px;line-height:1.5;}
+  .source-extra pre{margin:0;font-family:Consolas,"SF Mono",Menlo,monospace;white-space:pre-wrap;}
+  @media (max-width:780px){.two-col,.three-col,.join-area,.flow-output,.question-grid,.source-meta{grid-template-columns:1fr;}.flow-steps,.source-grid{grid-template-columns:repeat(2,1fr);}h1{font-size:24px;margin-top:58px}.corner-controls{left:10px;right:auto}.tab{font-size:12px;padding:7px 10px}.bar-row{grid-template-columns:80px 1fr 46px}}
+</style>
+</head>
+<body>
+<div class="corner-controls">
+  <a class="back-to-index" href="index.html">← Back to index</a>
+</div>
+<div class="wrap">
+  <h1>Pandas: del CSV al insight</h1>
+  <p class="subtitle"><a class="dataset-link" href="https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv" target="_blank" rel="noopener">Ver dataset Iris completo en CSV</a></p>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="explore">1. Explorar</button>
+    <button class="tab" data-tab="sources">2. Fuentes de datos</button>
+    <button class="tab" data-tab="select">3. Seleccionar</button>
+    <button class="tab" data-tab="filter">4. Filtrar</button>
+    <button class="tab" data-tab="transform">5. Transformar</button>
+    <button class="tab" data-tab="groupby">6. GroupBy</button>
+    <button class="tab" data-tab="merge">7. Merge + Parquet</button>
+    <button class="tab" data-tab="flow">8. Flujo completo</button>
+    <button class="tab" data-tab="cheatsheet">9. Cheat Sheet</button>
+  </div>
+
+  <section class="panel active" id="explore">
+    <div class="card">
+      <h2>Primer contacto con un DataFrame</h2>
+      <div class="code" id="loadCode" style="margin:12px 0 14px;"></div>
+
+      <div class="controls">
+        <button class="pill" data-view="head">df.head()</button>
+        <button class="secondary pill" data-view="tail">df.tail()</button>
+        <button class="secondary pill" data-view="shape">df.shape</button>
+        <button class="secondary pill" data-view="dtypes">df.dtypes</button>
+        <button class="secondary pill" data-view="describe">df.describe()</button>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="table-wrap" id="exploreTable"></div>
+        </div>
+        <div>
+          <div class="code" id="exploreCode"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="select">
+    <div class="card">
+      <h2>Series vs DataFrame</h2>
+      <p class="hint">Un solo par de corchetes devuelve una Series; doble lista de columnas devuelve otro DataFrame.</p>
+      <div class="col-chips" id="columnChips"></div>
+      <div class="controls">
+        <button id="selectOne">Seleccionar 1 columna</button>
+        <button class="secondary" id="selectMany">Seleccionar varias</button>
+      </div>
+      <div class="two-col">
+        <div class="table-wrap" id="selectTable"></div>
+        <div class="code" id="selectCode"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="filter">
+    <div class="card">
+      <h2>Filtrar filas con condiciones booleanas</h2>
+      <p class="hint">Pandas conserva las filas donde la condición evalúa `True`. Cambia la variable y el umbral para ver cómo cambia el resultado.</p>
+      <div class="controls">
+        <div class="control"><label for="filterCol">Columna</label><select id="filterCol"></select></div>
+        <div class="control"><label for="filterOp">Condición</label><select id="filterOp"><option value=">">&gt;</option><option value=">=">&gt;=</option><option value="<">&lt;</option><option value="<=">&lt;=</option></select></div>
+        <div class="control"><label for="filterVal">Umbral <span id="filterValLabel"></span></label><input id="filterVal" type="range" min="0" max="8" step="0.1" value="4"></div>
+      </div>
+      <div class="three-col">
+        <div class="kpi"><b id="filterRows">0</b><span>filas resultantes</span></div>
+        <div class="kpi"><b id="filterPct">0%</b><span>del DataFrame original</span></div>
+        <div class="kpi"><b id="filterMean">0.0</b><span>media de la columna filtrada</span></div>
+      </div>
+      <div class="two-col" style="margin-top:14px;">
+        <div class="table-wrap" id="filterTable"></div>
+        <div class="code" id="filterCode"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="transform">
+    <div class="card">
+      <h2>Crear columnas y tratar datos faltantes</h2>
+      <p class="hint">Este tab conecta tres ideas de la práctica: columna calculada, `apply` para clasificar y limpieza de valores faltantes.</p>
+      <div class="controls">
+        <button id="addArea">Crear area_petal</button>
+        <button class="secondary" id="addSize">Clasificar tamaño con apply</button>
+        <button class="ghost" id="toggleMissing">Simular valores faltantes</button>
+        <button class="secondary" id="fillMissing">fillna(media)</button>
+      </div>
+      <div class="two-col">
+        <div class="table-wrap" id="transformTable"></div>
+        <div>
+          <div class="code" id="transformCode"></div>
+          <div class="diagram" id="missingDiagram"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="groupby">
+    <div class="card">
+      <h2>GroupBy: resumir por categoría</h2>
+      <p class="hint">`groupby` parte el DataFrame por grupos, aplica una agregación y combina los resultados en una tabla resumen.</p>
+      <div class="controls">
+        <div class="control"><label for="metricCol">Métrica</label><select id="metricCol"></select></div>
+        <div class="control"><label for="aggFn">Agregación</label><select id="aggFn"><option value="mean">mean</option><option value="max">max</option><option value="min">min</option><option value="count">count</option></select></div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div id="bars"></div>
+          <div class="table-wrap" id="groupTable" style="margin-top:12px;"></div>
+        </div>
+        <div class="code" id="groupCode"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="merge">
+    <div class="card">
+      <h2>Unir tablas y guardar resultados</h2>
+      <p class="hint">`merge` combina tablas por una clave común. Parquet guarda tipos de datos y suele ser mejor que CSV para pipelines analíticos.</p>
+      <div class="controls">
+        <div class="control"><label for="joinType">Tipo de merge</label><select id="joinType"><option value="inner">inner</option><option value="left">left</option><option value="right">right</option><option value="outer">outer</option></select></div>
+        <div class="merge-note" id="mergeNote"></div>
+      </div>
+      <div class="join-area">
+        <div><p class="mini-title">estudiantes</p><div class="table-wrap" id="leftTable"></div></div>
+        <div><p class="mini-title">participacion</p><div class="table-wrap" id="rightTable"></div></div>
+      </div>
+      <div class="two-col">
+        <div class="table-wrap" id="mergeTable"></div>
+        <div class="code" id="mergeCode"></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="panel" id="flow">
+    <div class="card">
+      <h2>CSV-to-Insight Flow</h2>
+      <p class="hint">El mapa mental completo de la clase: cargar datos, inspeccionarlos, limpiarlos, filtrar, resumir y convertir el resultado en una visualización.</p>
+      <div class="flow-steps" id="flowSteps"></div>
+      <div class="flow-output">
+        <div>
+          <div class="table-wrap" id="flowTable"></div>
+          <div id="flowBars" style="margin-top:12px;"></div>
+        </div>
+        <div class="code" id="flowCode"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="cheatsheet">
+    <div class="card">
+      <h2>Pandas Cheat Sheet</h2>
+      <p class="hint">Haz clic en una acción frecuente para ver el código, cuándo usarlo y una salida mínima. Abajo hay preguntas típicas de clase que apuntan a la operación correcta.</p>
+      <div class="two-col">
+        <div class="table-wrap">
+          <table class="cheat-table">
+            <thead><tr><th>Quiero...</th><th>Acción pandas</th></tr></thead>
+            <tbody id="cheatRows"></tbody>
+          </table>
+        </div>
+        <div>
+          <div class="code" id="cheatCode"></div>
+          <div class="question-grid" id="questionGrid"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="panel" id="sources">
+    <div class="card">
+      <h2>Datos desde internet y librerías</h2>
+      <p class="hint">Escoge una fuente y usa el bloque de código durante la clase. La idea es que vean que un DataFrame puede nacer de una URL, de datasets incluidos en librerías, de OpenML, de seaborn, de Kaggle o del repositorio UCI.</p>
+      <div class="source-grid" id="sourceGrid"></div>
+      <div class="source-meta">
+        <div class="source-pill" id="sourceUse"></div>
+        <div class="source-pill" id="sourceLinkBox"></div>
+      </div>
+      <div class="two-col">
+        <div class="code" id="sourceCode"></div>
+        <div><div class="table-wrap" id="sourcePreview"></div><div class="source-extra" id="sourceExtra"></div></div>
+      </div>
+      <div class="source-guide">
+        <h3>Plantillas para otros datasets</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fuente</th><th>Que debes cambiar</th></tr></thead>
+            <tbody>
+              <tr><td>Kaggle</td><td>El slug: usuario/nombre-del-dataset, tomado de la URL.</td></tr>
+              <tr><td>CSV publico</td><td>La URL directa al archivo .csv.</td></tr>
+              <tr><td>UCI</td><td>El id del dataset, por ejemplo id=53 para Iris.</td></tr>
+              <tr><td>OpenML</td><td>El name o data_id, y si existe, la version.</td></tr>
+              <tr><td>seaborn</td><td>El nombre disponible en sns.load_dataset().</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code"># Kaggle: cambia solo el slug que aparece despues de /datasets/
+import kagglehub
+import pandas as pd
+from pathlib import Path
+
+slug = "usuario/nombre-del-dataset"
+path = kagglehub.dataset_download(slug)
+csv_files = list(Path(path).glob("*.csv"))
+df = pd.read_csv(csv_files[0])
+df.head()
+
+# CSV directo: cambia la URL
+url = "https://.../archivo.csv"
+df = pd.read_csv(url)
+
+# UCI: cambia el id del dataset
+from ucimlrepo import fetch_ucirepo
+uci_data = fetch_ucirepo(id=53)
+df = pd.concat([uci_data.data.features, uci_data.data.targets], axis=1)
+
+# OpenML: cambia name/version o usa data_id
+from sklearn.datasets import fetch_openml
+openml_data = fetch_openml(name="titanic", version=1, as_frame=True)
+df = openml_data.frame
+
+# seaborn: cambia el nombre del dataset
+import seaborn as sns
+df = sns.load_dataset("tips")</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const baseRows = [
+  {id:1,sepal_length:5.1,sepal_width:3.5,petal_length:1.4,petal_width:0.2,species:'setosa'},
+  {id:2,sepal_length:4.9,sepal_width:3.0,petal_length:1.4,petal_width:0.2,species:'setosa'},
+  {id:3,sepal_length:4.7,sepal_width:3.2,petal_length:1.3,petal_width:0.2,species:'setosa'},
+  {id:4,sepal_length:4.6,sepal_width:3.1,petal_length:1.5,petal_width:0.2,species:'setosa'},
+  {id:5,sepal_length:5.0,sepal_width:3.6,petal_length:1.4,petal_width:0.2,species:'setosa'},
+  {id:6,sepal_length:5.4,sepal_width:3.9,petal_length:1.7,petal_width:0.4,species:'setosa'},
+  {id:7,sepal_length:4.6,sepal_width:3.4,petal_length:1.4,petal_width:0.3,species:'setosa'},
+  {id:8,sepal_length:5.0,sepal_width:3.4,petal_length:1.5,petal_width:0.2,species:'setosa'},
+  {id:9,sepal_length:4.4,sepal_width:2.9,petal_length:1.4,petal_width:0.2,species:'setosa'},
+  {id:10,sepal_length:4.9,sepal_width:3.1,petal_length:1.5,petal_width:0.1,species:'setosa'},
+  {id:11,sepal_length:5.4,sepal_width:3.7,petal_length:1.5,petal_width:0.2,species:'setosa'},
+  {id:12,sepal_length:4.8,sepal_width:3.4,petal_length:1.6,petal_width:0.2,species:'setosa'},
+  {id:13,sepal_length:4.8,sepal_width:3.0,petal_length:1.4,petal_width:0.1,species:'setosa'},
+  {id:14,sepal_length:4.3,sepal_width:3.0,petal_length:1.1,petal_width:0.1,species:'setosa'},
+  {id:15,sepal_length:5.8,sepal_width:4.0,petal_length:1.2,petal_width:0.2,species:'setosa'},
+  {id:16,sepal_length:5.7,sepal_width:4.4,petal_length:1.5,petal_width:0.4,species:'setosa'},
+  {id:17,sepal_length:5.4,sepal_width:3.9,petal_length:1.3,petal_width:0.4,species:'setosa'},
+  {id:18,sepal_length:5.1,sepal_width:3.5,petal_length:1.4,petal_width:0.3,species:'setosa'},
+  {id:19,sepal_length:5.7,sepal_width:3.8,petal_length:1.7,petal_width:0.3,species:'setosa'},
+  {id:20,sepal_length:5.1,sepal_width:3.8,petal_length:1.5,petal_width:0.3,species:'setosa'},
+  {id:21,sepal_length:5.4,sepal_width:3.4,petal_length:1.7,petal_width:0.2,species:'setosa'},
+  {id:22,sepal_length:5.1,sepal_width:3.7,petal_length:1.5,petal_width:0.4,species:'setosa'},
+  {id:23,sepal_length:4.6,sepal_width:3.6,petal_length:1.0,petal_width:0.2,species:'setosa'},
+  {id:24,sepal_length:5.1,sepal_width:3.3,petal_length:1.7,petal_width:0.5,species:'setosa'},
+  {id:25,sepal_length:4.8,sepal_width:3.4,petal_length:1.9,petal_width:0.2,species:'setosa'},
+  {id:26,sepal_length:5.0,sepal_width:3.0,petal_length:1.6,petal_width:0.2,species:'setosa'},
+  {id:27,sepal_length:5.0,sepal_width:3.4,petal_length:1.6,petal_width:0.4,species:'setosa'},
+  {id:28,sepal_length:5.2,sepal_width:3.5,petal_length:1.5,petal_width:0.2,species:'setosa'},
+  {id:29,sepal_length:5.2,sepal_width:3.4,petal_length:1.4,petal_width:0.2,species:'setosa'},
+  {id:30,sepal_length:4.7,sepal_width:3.2,petal_length:1.6,petal_width:0.2,species:'setosa'},
+  {id:31,sepal_length:4.8,sepal_width:3.1,petal_length:1.6,petal_width:0.2,species:'setosa'},
+  {id:32,sepal_length:5.4,sepal_width:3.4,petal_length:1.5,petal_width:0.4,species:'setosa'},
+  {id:33,sepal_length:5.2,sepal_width:4.1,petal_length:1.5,petal_width:0.1,species:'setosa'},
+  {id:34,sepal_length:5.5,sepal_width:4.2,petal_length:1.4,petal_width:0.2,species:'setosa'},
+  {id:35,sepal_length:4.9,sepal_width:3.1,petal_length:1.5,petal_width:0.2,species:'setosa'},
+  {id:36,sepal_length:5.0,sepal_width:3.2,petal_length:1.2,petal_width:0.2,species:'setosa'},
+  {id:37,sepal_length:5.5,sepal_width:3.5,petal_length:1.3,petal_width:0.2,species:'setosa'},
+  {id:38,sepal_length:4.9,sepal_width:3.6,petal_length:1.4,petal_width:0.1,species:'setosa'},
+  {id:39,sepal_length:4.4,sepal_width:3.0,petal_length:1.3,petal_width:0.2,species:'setosa'},
+  {id:40,sepal_length:5.1,sepal_width:3.4,petal_length:1.5,petal_width:0.2,species:'setosa'},
+  {id:41,sepal_length:5.0,sepal_width:3.5,petal_length:1.3,petal_width:0.3,species:'setosa'},
+  {id:42,sepal_length:4.5,sepal_width:2.3,petal_length:1.3,petal_width:0.3,species:'setosa'},
+  {id:43,sepal_length:4.4,sepal_width:3.2,petal_length:1.3,petal_width:0.2,species:'setosa'},
+  {id:44,sepal_length:5.0,sepal_width:3.5,petal_length:1.6,petal_width:0.6,species:'setosa'},
+  {id:45,sepal_length:5.1,sepal_width:3.8,petal_length:1.9,petal_width:0.4,species:'setosa'},
+  {id:46,sepal_length:4.8,sepal_width:3.0,petal_length:1.4,petal_width:0.3,species:'setosa'},
+  {id:47,sepal_length:5.1,sepal_width:3.8,petal_length:1.6,petal_width:0.2,species:'setosa'},
+  {id:48,sepal_length:4.6,sepal_width:3.2,petal_length:1.4,petal_width:0.2,species:'setosa'},
+  {id:49,sepal_length:5.3,sepal_width:3.7,petal_length:1.5,petal_width:0.2,species:'setosa'},
+  {id:50,sepal_length:5.0,sepal_width:3.3,petal_length:1.4,petal_width:0.2,species:'setosa'},
+  {id:51,sepal_length:7.0,sepal_width:3.2,petal_length:4.7,petal_width:1.4,species:'versicolor'},
+  {id:52,sepal_length:6.4,sepal_width:3.2,petal_length:4.5,petal_width:1.5,species:'versicolor'},
+  {id:53,sepal_length:6.9,sepal_width:3.1,petal_length:4.9,petal_width:1.5,species:'versicolor'},
+  {id:54,sepal_length:5.5,sepal_width:2.3,petal_length:4.0,petal_width:1.3,species:'versicolor'},
+  {id:55,sepal_length:6.5,sepal_width:2.8,petal_length:4.6,petal_width:1.5,species:'versicolor'},
+  {id:56,sepal_length:5.7,sepal_width:2.8,petal_length:4.5,petal_width:1.3,species:'versicolor'},
+  {id:57,sepal_length:6.3,sepal_width:3.3,petal_length:4.7,petal_width:1.6,species:'versicolor'},
+  {id:58,sepal_length:4.9,sepal_width:2.4,petal_length:3.3,petal_width:1.0,species:'versicolor'},
+  {id:59,sepal_length:6.6,sepal_width:2.9,petal_length:4.6,petal_width:1.3,species:'versicolor'},
+  {id:60,sepal_length:5.2,sepal_width:2.7,petal_length:3.9,petal_width:1.4,species:'versicolor'},
+  {id:61,sepal_length:5.0,sepal_width:2.0,petal_length:3.5,petal_width:1.0,species:'versicolor'},
+  {id:62,sepal_length:5.9,sepal_width:3.0,petal_length:4.2,petal_width:1.5,species:'versicolor'},
+  {id:63,sepal_length:6.0,sepal_width:2.2,petal_length:4.0,petal_width:1.0,species:'versicolor'},
+  {id:64,sepal_length:6.1,sepal_width:2.9,petal_length:4.7,petal_width:1.4,species:'versicolor'},
+  {id:65,sepal_length:5.6,sepal_width:2.9,petal_length:3.6,petal_width:1.3,species:'versicolor'},
+  {id:66,sepal_length:6.7,sepal_width:3.1,petal_length:4.4,petal_width:1.4,species:'versicolor'},
+  {id:67,sepal_length:5.6,sepal_width:3.0,petal_length:4.5,petal_width:1.5,species:'versicolor'},
+  {id:68,sepal_length:5.8,sepal_width:2.7,petal_length:4.1,petal_width:1.0,species:'versicolor'},
+  {id:69,sepal_length:6.2,sepal_width:2.2,petal_length:4.5,petal_width:1.5,species:'versicolor'},
+  {id:70,sepal_length:5.6,sepal_width:2.5,petal_length:3.9,petal_width:1.1,species:'versicolor'},
+  {id:71,sepal_length:5.9,sepal_width:3.2,petal_length:4.8,petal_width:1.8,species:'versicolor'},
+  {id:72,sepal_length:6.1,sepal_width:2.8,petal_length:4.0,petal_width:1.3,species:'versicolor'},
+  {id:73,sepal_length:6.3,sepal_width:2.5,petal_length:4.9,petal_width:1.5,species:'versicolor'},
+  {id:74,sepal_length:6.1,sepal_width:2.8,petal_length:4.7,petal_width:1.2,species:'versicolor'},
+  {id:75,sepal_length:6.4,sepal_width:2.9,petal_length:4.3,petal_width:1.3,species:'versicolor'},
+  {id:76,sepal_length:6.6,sepal_width:3.0,petal_length:4.4,petal_width:1.4,species:'versicolor'},
+  {id:77,sepal_length:6.8,sepal_width:2.8,petal_length:4.8,petal_width:1.4,species:'versicolor'},
+  {id:78,sepal_length:6.7,sepal_width:3.0,petal_length:5.0,petal_width:1.7,species:'versicolor'},
+  {id:79,sepal_length:6.0,sepal_width:2.9,petal_length:4.5,petal_width:1.5,species:'versicolor'},
+  {id:80,sepal_length:5.7,sepal_width:2.6,petal_length:3.5,petal_width:1.0,species:'versicolor'},
+  {id:81,sepal_length:5.5,sepal_width:2.4,petal_length:3.8,petal_width:1.1,species:'versicolor'},
+  {id:82,sepal_length:5.5,sepal_width:2.4,petal_length:3.7,petal_width:1.0,species:'versicolor'},
+  {id:83,sepal_length:5.8,sepal_width:2.7,petal_length:3.9,petal_width:1.2,species:'versicolor'},
+  {id:84,sepal_length:6.0,sepal_width:2.7,petal_length:5.1,petal_width:1.6,species:'versicolor'},
+  {id:85,sepal_length:5.4,sepal_width:3.0,petal_length:4.5,petal_width:1.5,species:'versicolor'},
+  {id:86,sepal_length:6.0,sepal_width:3.4,petal_length:4.5,petal_width:1.6,species:'versicolor'},
+  {id:87,sepal_length:6.7,sepal_width:3.1,petal_length:4.7,petal_width:1.5,species:'versicolor'},
+  {id:88,sepal_length:6.3,sepal_width:2.3,petal_length:4.4,petal_width:1.3,species:'versicolor'},
+  {id:89,sepal_length:5.6,sepal_width:3.0,petal_length:4.1,petal_width:1.3,species:'versicolor'},
+  {id:90,sepal_length:5.5,sepal_width:2.5,petal_length:4.0,petal_width:1.3,species:'versicolor'},
+  {id:91,sepal_length:5.5,sepal_width:2.6,petal_length:4.4,petal_width:1.2,species:'versicolor'},
+  {id:92,sepal_length:6.1,sepal_width:3.0,petal_length:4.6,petal_width:1.4,species:'versicolor'},
+  {id:93,sepal_length:5.8,sepal_width:2.6,petal_length:4.0,petal_width:1.2,species:'versicolor'},
+  {id:94,sepal_length:5.0,sepal_width:2.3,petal_length:3.3,petal_width:1.0,species:'versicolor'},
+  {id:95,sepal_length:5.6,sepal_width:2.7,petal_length:4.2,petal_width:1.3,species:'versicolor'},
+  {id:96,sepal_length:5.7,sepal_width:3.0,petal_length:4.2,petal_width:1.2,species:'versicolor'},
+  {id:97,sepal_length:5.7,sepal_width:2.9,petal_length:4.2,petal_width:1.3,species:'versicolor'},
+  {id:98,sepal_length:6.2,sepal_width:2.9,petal_length:4.3,petal_width:1.3,species:'versicolor'},
+  {id:99,sepal_length:5.1,sepal_width:2.5,petal_length:3.0,petal_width:1.1,species:'versicolor'},
+  {id:100,sepal_length:5.7,sepal_width:2.8,petal_length:4.1,petal_width:1.3,species:'versicolor'},
+  {id:101,sepal_length:6.3,sepal_width:3.3,petal_length:6.0,petal_width:2.5,species:'virginica'},
+  {id:102,sepal_length:5.8,sepal_width:2.7,petal_length:5.1,petal_width:1.9,species:'virginica'},
+  {id:103,sepal_length:7.1,sepal_width:3.0,petal_length:5.9,petal_width:2.1,species:'virginica'},
+  {id:104,sepal_length:6.3,sepal_width:2.9,petal_length:5.6,petal_width:1.8,species:'virginica'},
+  {id:105,sepal_length:6.5,sepal_width:3.0,petal_length:5.8,petal_width:2.2,species:'virginica'},
+  {id:106,sepal_length:7.6,sepal_width:3.0,petal_length:6.6,petal_width:2.1,species:'virginica'},
+  {id:107,sepal_length:4.9,sepal_width:2.5,petal_length:4.5,petal_width:1.7,species:'virginica'},
+  {id:108,sepal_length:7.3,sepal_width:2.9,petal_length:6.3,petal_width:1.8,species:'virginica'},
+  {id:109,sepal_length:6.7,sepal_width:2.5,petal_length:5.8,petal_width:1.8,species:'virginica'},
+  {id:110,sepal_length:7.2,sepal_width:3.6,petal_length:6.1,petal_width:2.5,species:'virginica'},
+  {id:111,sepal_length:6.5,sepal_width:3.2,petal_length:5.1,petal_width:2.0,species:'virginica'},
+  {id:112,sepal_length:6.4,sepal_width:2.7,petal_length:5.3,petal_width:1.9,species:'virginica'},
+  {id:113,sepal_length:6.8,sepal_width:3.0,petal_length:5.5,petal_width:2.1,species:'virginica'},
+  {id:114,sepal_length:5.7,sepal_width:2.5,petal_length:5.0,petal_width:2.0,species:'virginica'},
+  {id:115,sepal_length:5.8,sepal_width:2.8,petal_length:5.1,petal_width:2.4,species:'virginica'},
+  {id:116,sepal_length:6.4,sepal_width:3.2,petal_length:5.3,petal_width:2.3,species:'virginica'},
+  {id:117,sepal_length:6.5,sepal_width:3.0,petal_length:5.5,petal_width:1.8,species:'virginica'},
+  {id:118,sepal_length:7.7,sepal_width:3.8,petal_length:6.7,petal_width:2.2,species:'virginica'},
+  {id:119,sepal_length:7.7,sepal_width:2.6,petal_length:6.9,petal_width:2.3,species:'virginica'},
+  {id:120,sepal_length:6.0,sepal_width:2.2,petal_length:5.0,petal_width:1.5,species:'virginica'},
+  {id:121,sepal_length:6.9,sepal_width:3.2,petal_length:5.7,petal_width:2.3,species:'virginica'},
+  {id:122,sepal_length:5.6,sepal_width:2.8,petal_length:4.9,petal_width:2.0,species:'virginica'},
+  {id:123,sepal_length:7.7,sepal_width:2.8,petal_length:6.7,petal_width:2.0,species:'virginica'},
+  {id:124,sepal_length:6.3,sepal_width:2.7,petal_length:4.9,petal_width:1.8,species:'virginica'},
+  {id:125,sepal_length:6.7,sepal_width:3.3,petal_length:5.7,petal_width:2.1,species:'virginica'},
+  {id:126,sepal_length:7.2,sepal_width:3.2,petal_length:6.0,petal_width:1.8,species:'virginica'},
+  {id:127,sepal_length:6.2,sepal_width:2.8,petal_length:4.8,petal_width:1.8,species:'virginica'},
+  {id:128,sepal_length:6.1,sepal_width:3.0,petal_length:4.9,petal_width:1.8,species:'virginica'},
+  {id:129,sepal_length:6.4,sepal_width:2.8,petal_length:5.6,petal_width:2.1,species:'virginica'},
+  {id:130,sepal_length:7.2,sepal_width:3.0,petal_length:5.8,petal_width:1.6,species:'virginica'},
+  {id:131,sepal_length:7.4,sepal_width:2.8,petal_length:6.1,petal_width:1.9,species:'virginica'},
+  {id:132,sepal_length:7.9,sepal_width:3.8,petal_length:6.4,petal_width:2.0,species:'virginica'},
+  {id:133,sepal_length:6.4,sepal_width:2.8,petal_length:5.6,petal_width:2.2,species:'virginica'},
+  {id:134,sepal_length:6.3,sepal_width:2.8,petal_length:5.1,petal_width:1.5,species:'virginica'},
+  {id:135,sepal_length:6.1,sepal_width:2.6,petal_length:5.6,petal_width:1.4,species:'virginica'},
+  {id:136,sepal_length:7.7,sepal_width:3.0,petal_length:6.1,petal_width:2.3,species:'virginica'},
+  {id:137,sepal_length:6.3,sepal_width:3.4,petal_length:5.6,petal_width:2.4,species:'virginica'},
+  {id:138,sepal_length:6.4,sepal_width:3.1,petal_length:5.5,petal_width:1.8,species:'virginica'},
+  {id:139,sepal_length:6.0,sepal_width:3.0,petal_length:4.8,petal_width:1.8,species:'virginica'},
+  {id:140,sepal_length:6.9,sepal_width:3.1,petal_length:5.4,petal_width:2.1,species:'virginica'},
+  {id:141,sepal_length:6.7,sepal_width:3.1,petal_length:5.6,petal_width:2.4,species:'virginica'},
+  {id:142,sepal_length:6.9,sepal_width:3.1,petal_length:5.1,petal_width:2.3,species:'virginica'},
+  {id:143,sepal_length:5.8,sepal_width:2.7,petal_length:5.1,petal_width:1.9,species:'virginica'},
+  {id:144,sepal_length:6.8,sepal_width:3.2,petal_length:5.9,petal_width:2.3,species:'virginica'},
+  {id:145,sepal_length:6.7,sepal_width:3.3,petal_length:5.7,petal_width:2.5,species:'virginica'},
+  {id:146,sepal_length:6.7,sepal_width:3.0,petal_length:5.2,petal_width:2.3,species:'virginica'},
+  {id:147,sepal_length:6.3,sepal_width:2.5,petal_length:5.0,petal_width:1.9,species:'virginica'},
+  {id:148,sepal_length:6.5,sepal_width:3.0,petal_length:5.2,petal_width:2.0,species:'virginica'},
+  {id:149,sepal_length:6.2,sepal_width:3.4,petal_length:5.4,petal_width:2.3,species:'virginica'},
+  {id:150,sepal_length:5.9,sepal_width:3.0,petal_length:5.1,petal_width:1.8,species:'virginica'}
+];
+let df = baseRows.map(r => ({...r}));
+const numericCols = ['sepal_length','sepal_width','petal_length','petal_width'];
+const allCols = ['id',...numericCols,'species'];
+let selectedCols = ['species','petal_length'];
+let exploreView = 'head';
+let hasArea = false, hasSize = false, missingOn = false, missingFilled = false;
+
+function fmt(v){ return typeof v === 'number' ? Number(v).toFixed(v % 1 === 0 ? 0 : 1) : (v == null ? 'NaN' : v); }
+function mean(vals){ const xs = vals.filter(v => typeof v === 'number' && !Number.isNaN(v)); return xs.reduce((a,b)=>a+b,0)/Math.max(xs.length,1); }
+function table(rows, cols, opts={}){
+  const body = rows.map((r,i)=>`<tr class="${opts.highlight && opts.highlight(r,i) ? 'highlight' : ''}">${cols.map(c=>`<td class="${typeof r[c] === 'number' ? 'num' : ''}">${fmt(r[c])}</td>`).join('')}</tr>`).join('');
+  return `<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function updateTab(id){ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id)); document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id===id)); }
+
+document.getElementById('tabs').addEventListener('click', e=>{ const btn=e.target.closest('.tab'); if(btn) updateTab(btn.dataset.tab); });
+
+document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{ exploreView=btn.dataset.view; document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('secondary', b!==btn)); renderExplore(); }));
+function renderLoadCode(){
+  document.getElementById('loadCode').textContent = `import pandas as pd
+import numpy as np
+
+url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv"
+df = pd.read_csv(url)
+
+# Si no hay internet, se puede crear un DataFrame pequeño así.
+# Esto es un diccionario de listas:
+# - cada llave del diccionario será una columna
+# - cada lista tiene los valores de esa columna
+# - todas las listas deben tener la misma longitud
+
+df = pd.DataFrame({
+    "sepal_length": [5.1, 4.9, 5.8, 6.0, 6.3],
+    "sepal_width":  [3.5, 3.0, 2.7, 2.9, 3.3],
+    "petal_length": [1.4, 1.4, 4.1, 4.5, 6.0],
+    "petal_width":  [0.2, 0.2, 1.0, 1.5, 2.5],
+    "species": ["setosa", "setosa", "versicolor", "versicolor", "virginica"]
+})
+
+# También puede venir de una lista de diccionarios:
+filas = [
+    {"species": "setosa", "petal_length": 1.4},
+    {"species": "versicolor", "petal_length": 4.1}
+]
+df2 = pd.DataFrame(filas)
+
+# O de una matriz/lista de listas + nombres de columnas:
+df3 = pd.DataFrame([[5.1, 1.4], [5.8, 4.1]],
+                   columns=["sepal_length", "petal_length"])`;
+}
+function renderExplore(){
+  let html='', code='';
+  if(exploreView==='head'){ html=table(df.slice(0,5), allCols); code='df.head()\n# Primeras 5 filas para inspección rápida'; }
+  if(exploreView==='tail'){ html=table(df.slice(-5), allCols); code='df.tail()\n# Ultimas 5 filas: util para revisar cargas recientes'; }
+  if(exploreView==='shape'){ html=table([{filas:df.length,columnas:allCols.length}], ['filas','columnas']); code='df.shape\n# devuelve (filas, columnas)'; }
+  if(exploreView==='dtypes'){ html=table(allCols.map(c=>({columna:c,tipo:numericCols.includes(c)||c==='id'?'float/int':'object'})), ['columna','tipo']); code='df.dtypes\n# cada columna tiene un tipo de dato'; }
+  if(exploreView==='describe'){
+    const rows = numericCols.map(c=>({columna:c,count:df.filter(r=>r[c]!=null).length,mean:mean(df.map(r=>r[c])),min:Math.min(...df.filter(r=>r[c]!=null).map(r=>r[c])),max:Math.max(...df.filter(r=>r[c]!=null).map(r=>r[c]))}));
+    html=table(rows,['columna','count','mean','min','max']); code='df.describe()\n# resumen estadístico de columnas numéricas';
+  }
+  document.getElementById('exploreTable').innerHTML=html; document.getElementById('exploreCode').textContent=code;
+}
+function renderSelect(){
+  document.getElementById('columnChips').innerHTML = allCols.map(c=>`<button class="chip ${numericCols.includes(c)||c==='id'?'numeric':'text'} ${selectedCols.includes(c)?'active':''}" data-col="${c}">${c}</button>`).join('');
+  document.getElementById('selectTable').innerHTML = table(df.slice(0,7), selectedCols);
+  document.getElementById('selectCode').textContent = selectedCols.length === 1 ? `df["${selectedCols[0]}"]\n# Una columna: devuelve una Series` : `df[[${selectedCols.map(c=>'"'+c+'"').join(', ')}]]\n# Varias columnas: devuelve un DataFrame`;
+}
+document.getElementById('columnChips').addEventListener('click', e=>{ const c=e.target.dataset.col; if(!c)return; selectedCols.includes(c) ? selectedCols=selectedCols.filter(x=>x!==c) : selectedCols.push(c); if(selectedCols.length===0) selectedCols=[c]; renderSelect(); });
+document.getElementById('selectOne').addEventListener('click',()=>{ selectedCols=['petal_length']; renderSelect(); });
+document.getElementById('selectMany').addEventListener('click',()=>{ selectedCols=['species','sepal_length','petal_length']; renderSelect(); });
+
+function compare(a,op,b){ if(op==='>')return a>b; if(op==='>=')return a>=b; if(op==='<')return a<b; return a<=b; }
+function renderFilter(){
+  const col=document.getElementById('filterCol').value, op=document.getElementById('filterOp').value, val=Number(document.getElementById('filterVal').value);
+  document.getElementById('filterValLabel').textContent=val.toFixed(1);
+  const rows=df.filter(r=>compare(r[col],op,val));
+  document.getElementById('filterRows').textContent=rows.length; document.getElementById('filterPct').textContent=Math.round(rows.length/df.length*100)+'%'; document.getElementById('filterMean').textContent=mean(rows.map(r=>r[col])).toFixed(2);
+  document.getElementById('filterTable').innerHTML=table(rows, allCols, {highlight:r=>compare(r[col],op,val)});
+  document.getElementById('filterCode').textContent=`grandes = df[df["${col}"] ${op} ${val.toFixed(1)}]\nprint(len(grandes))`;
+}
+['filterCol','filterOp','filterVal'].forEach(id=>document.getElementById(id).addEventListener('input', renderFilter));
+
+function rebuildDf(){ df = baseRows.map(r=>({...r})); if(missingOn){ df[2].sepal_width=null; df[6].petal_width=null; df[9].petal_length=null; } if(missingFilled){ numericCols.forEach(c=>{ const m=mean(df.map(r=>r[c])); df.forEach(r=>{ if(r[c]==null) r[c]=Number(m.toFixed(1)); }); }); } if(hasArea){ df.forEach(r=>{ r.area_petal = r.petal_length==null||r.petal_width==null ? null : Number((r.petal_length*r.petal_width).toFixed(2)); }); } if(hasSize){ df.forEach(r=>{ r.tamaño = r.petal_length==null ? 'desconocida' : (r.petal_length>4.0 ? 'grande' : 'pequeña'); }); } }
+function transformCols(){ return [...allCols, ...(hasArea?['area_petal']:[]), ...(hasSize?['tamaño']:[])]; }
+function renderTransform(){ rebuildDf(); document.getElementById('transformTable').innerHTML=table(df.slice(0,8), transformCols()); let code=[]; if(hasArea) code.push('df["area_petal"] = df["petal_length"] * df["petal_width"]'); if(hasSize) code.push('df["tamaño"] = df["petal_length"].apply(lambda x: "grande" if x > 4.0 else "pequeña")'); if(missingOn) code.push('df.isna().sum()'); if(missingFilled) code.push('df = df.fillna(df.mean(numeric_only=True))'); document.getElementById('transformCode').textContent=code.join('\n') || '# Activa una transformación para ver el código pandas equivalente'; const miss=numericCols.map(c=>({col:c,n:df.filter(r=>r[c]==null).length})); document.getElementById('missingDiagram').innerHTML=miss.map(m=>`<span class="node">${m.col}: ${m.n} NaN</span>`).join('<span class="arrow">→</span>'); renderFilter(); renderGroup(); }
+document.getElementById('addArea').addEventListener('click',()=>{ hasArea=!hasArea; renderTransform(); });
+document.getElementById('addSize').addEventListener('click',()=>{ hasSize=!hasSize; renderTransform(); });
+document.getElementById('toggleMissing').addEventListener('click',()=>{ missingOn=!missingOn; if(!missingOn) missingFilled=false; renderTransform(); });
+document.getElementById('fillMissing').addEventListener('click',()=>{ missingOn=true; missingFilled=true; renderTransform(); });
+
+function renderGroup(){ const metric=document.getElementById('metricCol').value, agg=document.getElementById('aggFn').value; const groups=[...new Set(df.map(r=>r.species))]; const rows=groups.map(g=>{ const vals=df.filter(r=>r.species===g).map(r=>r[metric]).filter(v=>v!=null); let value=agg==='mean'?mean(vals):agg==='max'?Math.max(...vals):agg==='min'?Math.min(...vals):vals.length; return {species:g,[agg+'_'+metric]:Number(value.toFixed ? value.toFixed(2) : value)}; }); const valKey=agg+'_'+metric; const maxv=Math.max(...rows.map(r=>r[valKey])); document.getElementById('bars').innerHTML=rows.map(r=>`<div class="bar-row"><span>${r.species}</span><div class="bar-track"><div class="bar-fill" style="width:${(r[valKey]/maxv*100).toFixed(1)}%"></div></div><b>${r[valKey]}</b></div>`).join(''); document.getElementById('groupTable').innerHTML=table(rows,['species',valKey]); document.getElementById('groupCode').textContent=`resumen = df.groupby("species")[["${metric}"]].${agg}()\nprint(resumen)`; }
+['metricCol','aggFn'].forEach(id=>document.getElementById(id).addEventListener('input', renderGroup));
+
+const leftRows=[{student_id:1,nombre:'Ana',carrera:'IA'},{student_id:2,nombre:'Luis',carrera:'Datos'},{student_id:3,nombre:'Maya',carrera:'IA'},{student_id:4,nombre:'Juan',carrera:'Software'}];
+const rightRows=[{student_id:1,asistencias:8},{student_id:3,asistencias:10},{student_id:5,asistencias:6}];
+function renderMerge(){
+  const type=document.getElementById('joinType').value;
+  const notes={
+    inner:'Conserva unicamente los identificadores que existen en ambas tablas.',
+    left:'Conserva todos los identificadores de la tabla izquierda: estudiantes. Si no hay participacion, completa con NaN.',
+    right:'Conserva todos los identificadores de la tabla derecha: participacion. Si no hay datos del estudiante, completa con NaN.',
+    outer:'Conserva todos los identificadores de ambas tablas. Donde falta informacion de algun lado, completa con NaN.'
+  };
+  let ids=[];
+  const lIds=leftRows.map(r=>r.student_id), rIds=rightRows.map(r=>r.student_id);
+  if(type==='inner') ids=lIds.filter(id=>rIds.includes(id));
+  if(type==='left') ids=lIds;
+  if(type==='right') ids=rIds;
+  if(type==='outer') ids=[...new Set([...lIds,...rIds])].sort((a,b)=>a-b);
+  const rows=ids.map(id=>({...(leftRows.find(r=>r.student_id===id)||{student_id:id,nombre:'NaN',carrera:'NaN'}), ...(rightRows.find(r=>r.student_id===id)||{asistencias:'NaN'})}));
+  document.getElementById('leftTable').innerHTML=table(leftRows,['student_id','nombre','carrera']);
+  document.getElementById('rightTable').innerHTML=table(rightRows,['student_id','asistencias']);
+  document.getElementById('mergeTable').innerHTML=table(rows,['student_id','nombre','carrera','asistencias']);
+  document.getElementById('mergeNote').innerHTML=`<b>${type}</b>: ${notes[type]}`;
+  document.getElementById('mergeCode').textContent=`df_final = estudiantes.merge(participacion, on="student_id", how="${type}")
+df_final.to_parquet("estudiantes_procesado.parquet")
+df_check = pd.read_parquet("estudiantes_procesado.parquet")`;
+}
+document.getElementById('joinType').addEventListener('input', renderMerge);
+
+
+const flowData = [
+  {key:'read', title:'read_csv', note:'Entrada tabular', code:'df = pd.read_csv("iris.csv")', rows:baseRows.slice(0,5), cols:allCols},
+  {key:'inspect', title:'inspección', note:'shape, dtypes, describe', code:'df.shape\ndf.dtypes\ndf.describe()', rows:numericCols.map(c=>({columna:c,media:mean(baseRows.map(r=>r[c])),min:Math.min(...baseRows.map(r=>r[c])),max:Math.max(...baseRows.map(r=>r[c]))})), cols:['columna','media','min','max']},
+  {key:'clean', title:'limpieza', note:'NaN y fillna', code:'df.isna().sum()\ndf = df.fillna(df.mean(numeric_only=True))', rows:[{columna:'petal_length',antes:'1 NaN',despues:'0 NaN'},{columna:'petal_width',antes:'1 NaN',despues:'0 NaN'}], cols:['columna','antes','despues']},
+  {key:'filter', title:'filtro', note:'condición booleana', code:'df_filtrado = df[df["petal_length"] > 4.0]', rows:baseRows.filter(r=>r.petal_length>4).slice(0,6), cols:allCols},
+  {key:'group', title:'groupby', note:'resumen por especie', code:'resumen = df.groupby("species")[["petal_length"]].mean()', rows:[], cols:['species','petal_length_mean']},
+  {key:'plot', title:'gráfico', note:'del resumen al insight', code:'resumen.plot(kind="bar")\nplt.ylabel("petal_length promedio")', rows:[], cols:['species','petal_length_mean']}
+];
+let activeFlow = 'read';
+function groupedPetalRows(){ return [...new Set(baseRows.map(r=>r.species))].map(s=>({species:s, petal_length_mean:Number(mean(baseRows.filter(r=>r.species===s).map(r=>r.petal_length)).toFixed(2))})); }
+function renderFlow(){
+  document.getElementById('flowSteps').innerHTML = flowData.map(s=>`<button class="flow-step ${s.key===activeFlow?'active':''}" data-flow="${s.key}"><b>${s.title}</b><span>${s.note}</span></button>`).join('');
+  const step = flowData.find(s=>s.key===activeFlow);
+  const rows = (step.key==='group' || step.key==='plot') ? groupedPetalRows() : step.rows;
+  document.getElementById('flowTable').innerHTML = table(rows, step.cols);
+  document.getElementById('flowCode').textContent = step.code;
+  if(step.key==='plot'){
+    const maxv = Math.max(...rows.map(r=>r.petal_length_mean));
+    document.getElementById('flowBars').innerHTML = rows.map(r=>`<div class="bar-row"><span>${r.species}</span><div class="bar-track"><div class="bar-fill" style="width:${(r.petal_length_mean/maxv*100).toFixed(1)}%"></div></div><b>${r.petal_length_mean}</b></div>`).join('');
+  } else {
+    document.getElementById('flowBars').innerHTML = '';
+  }
+}
+document.getElementById('flowSteps').addEventListener('click', e=>{ const b=e.target.closest('[data-flow]'); if(!b)return; activeFlow=b.dataset.flow; renderFlow(); });
+
+const cheats = [
+  {q:'Cargar un CSV', op:'read_csv', code:'df = pd.read_csv("archivo.csv")', out:'Crea un DataFrame desde un archivo tabular.'},
+  {q:'Ver primeras filas', op:'head', code:'df.head()', out:'Muestra una muestra rápida para revisar columnas y valores.'},
+  {q:'Saber tamaño', op:'shape', code:'df.shape', out:'Devuelve (filas, columnas).'},
+  {q:'Elegir columnas', op:'selección', code:'df[["species", "petal_length"]]', out:'Devuelve un DataFrame con columnas específicas.'},
+  {q:'Filtrar filas', op:'boolean mask', code:'df[df["petal_length"] > 4.0]', out:'Conserva solo filas donde la condición es True.'},
+  {q:'Crear columna', op:'asignación', code:'df["area_petal"] = df["petal_length"] * df["petal_width"]', out:'Agrega una variable calculada al DataFrame.'},
+  {q:'Agrupar', op:'groupby', code:'df.groupby("species")[["petal_length"]].mean()', out:'Resume datos por categoría.'},
+  {q:'Ordenar', op:'sort_values', code:'df.sort_values("sepal_length", ascending=False)', out:'Reordena filas por una columna.'},
+  {q:'Unir tablas', op:'merge', code:'estudiantes.merge(participacion, on="student_id", how="left")', out:'Combina información usando una clave común.'},
+  {q:'Guardar Parquet', op:'to_parquet', code:'df.to_parquet("estudiantes_procesado.parquet")', out:'Guarda datos preservando tipos y esquema.'}
+];
+const questions = [
+  {text:'¿Qué especie tiene pétalos más largos en promedio?', pick:'groupby'},
+  {text:'¿Cuáles filas tienen petal_length mayor a 4?', pick:'boolean mask'},
+  {text:'¿Cómo calculo area_petal?', pick:'asignación'},
+  {text:'¿Cómo junto asistencia con estudiantes?', pick:'merge'}
+];
+let activeCheat = 'read_csv';
+function renderCheat(){
+  document.getElementById('cheatRows').innerHTML = cheats.map(c=>`<tr class="${c.op===activeCheat?'active':''}" data-op="${c.op}"><td>${c.q}</td><td><code>${c.op}</code></td></tr>`).join('');
+  const c = cheats.find(x=>x.op===activeCheat) || cheats[0];
+  document.getElementById('cheatCode').textContent = `${c.code}\n\n# ${c.out}`;
+  document.getElementById('questionGrid').innerHTML = questions.map(q=>`<button class="question-card ${q.pick===activeCheat?'active':''}" data-op="${q.pick}">${q.text}</button>`).join('');
+}
+document.getElementById('cheatRows').addEventListener('click', e=>{ const tr=e.target.closest('[data-op]'); if(!tr)return; activeCheat=tr.dataset.op; renderCheat(); });
+document.getElementById('questionGrid').addEventListener('click', e=>{ const q=e.target.closest('[data-op]'); if(!q)return; activeCheat=q.dataset.op; renderCheat(); });
+
+const dataSources = [
+  {
+    key:'url',
+    name:'URL CSV',
+    note:'GitHub raw, datos abiertos',
+    use:'Cuando ya tienes un enlace directo a un CSV público.',
+    link:'https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv',
+    linkLabel:'Iris CSV en GitHub raw',
+    code:'import pandas as pd\n\nurl = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv"\ndf = pd.read_csv(url)\ndf.head()',
+    rows:baseRows.slice(0,5),
+    cols:allCols
+  },
+  {
+    key:'sklearn',
+    name:'scikit-learn',
+    note:'iris, wine, digits...',
+    use:'Para practicar ML rápido con datasets que vienen dentro de scikit-learn.',
+    link:'https://scikit-learn.org/stable/datasets.html',
+    linkLabel:'Documentación sklearn.datasets',
+    code:'from sklearn.datasets import load_iris\n\n# as_frame=True pide pandas para explorar mejor.\n# Scikit-learn internamente puede convertir X/y a arrays NumPy al entrenar.\ndatos = load_iris(as_frame=True)\ndf = datos.frame   # DataFrame completo\nX = datos.data     # variables de entrada\ny = datos.target   # etiqueta/target',
+    extra:'<pre>Pandas -> explorar, limpiar, seleccionar columnas, entender datos\nNumPy  -> calculo numerico interno / entrenamiento final\n\nPara modelos como LogisticRegression, puedes pasar pandas.\nScikit-learn internamente convierte los datos a arrays NumPy cuando lo necesita.</pre>',
+    rows:[{objeto:'as_frame=True',tipo:'devuelve pandas/DataFrame en vez de arrays NumPy'},{objeto:'datos.frame',tipo:'DataFrame completo'},{objeto:'datos.data',tipo:'features X'},{objeto:'datos.target',tipo:'etiqueta y'}],
+    cols:['objeto','tipo']
+  },
+  {
+    key:'openml',
+    name:'OpenML',
+    note:'miles de datasets',
+    use:'Cuando quieres datasets públicos por nombre o versión. Titanic es el nombre del dataset en OpenML; version=1 fija una versión concreta para que el ejemplo sea reproducible.',
+    link:'https://www.openml.org/d/40945',
+    linkLabel:'OpenML: Titanic dataset (data id 40945)',
+    code:'from sklearn.datasets import fetch_openml\n\n# "titanic" es el nombre del dataset en OpenML.\n# version=1 fija la versión exacta del dataset.\n# as_frame=True pide que sklearn lo entregue como pandas.\ntitanic = fetch_openml(name="titanic", version=1, as_frame=True)\n\ndf = titanic.frame   # DataFrame completo\nX = titanic.data     # variables de entrada\ny = titanic.target   # variable objetivo\ndf.head()',
+    rows:[{campo:'name="titanic"',contenido:'busca el dataset llamado Titanic en OpenML'},{campo:'version=1',contenido:'usa la versión 1 para evitar cambios entre corridas'},{campo:'as_frame=True',contenido:'devuelve pandas en vez de arrays NumPy'},{campo:'data id 40945',contenido:'página directa del dataset en OpenML'}],
+    cols:['campo','contenido']
+  },
+  {
+    key:'seaborn',
+    name:'seaborn',
+    note:'tips, penguins, flights',
+    use:'Para ejemplos rápidos de visualización y análisis exploratorio.',
+    link:'https://github.com/mwaskom/seaborn-data',
+    linkLabel:'Repositorio seaborn-data',
+    code:'import seaborn as sns\n\ndf = sns.load_dataset("tips")\ndf.head()',
+    rows:[{dataset:'tips',uso:'propinas y cuentas'},{dataset:'penguins',uso:'clasificación simple'},{dataset:'flights',uso:'series de tiempo'}],
+    cols:['dataset','uso']
+  },
+  {
+    key:'kaggle',
+    name:'Kaggle',
+    note:'datasets reales',
+    use:'Para trabajar con datasets publicados por la comunidad. Requiere cuenta y token de Kaggle.',
+    link:'https://www.kaggle.com/datasets/uciml/iris',
+    linkLabel:'Kaggle: Iris Species (uciml/iris)',
+    code:'import kagglehub\nimport pandas as pd\n\npath = kagglehub.dataset_download("uciml/iris")\ndf = pd.read_csv(path + "/Iris.csv")\ndf.head()\n\n# Alternativa CLI:\n# kaggle datasets download -d uciml/iris --unzip',
+    rows:[{archivo:'Iris.csv',columnas:'Id, SepalLengthCm, SepalWidthCm, PetalLengthCm, PetalWidthCm, Species'},{archivo:'origen',columnas:'Kaggle dataset uciml/iris'}],
+    cols:['archivo','columnas']
+  },
+  {
+    key:'uci',
+    name:'UCI ML Repo',
+    note:'datasets académicos',
+    use:'Para buscar datasets clásicos y bien citados en machine learning. Iris aparece en UCI como dataset tabular de clasificación.',
+    link:'https://archive.ics.uci.edu/dataset/53/iris',
+    linkLabel:'UCI: Iris dataset (id 53)',
+    code:'from ucimlrepo import fetch_ucirepo\nimport pandas as pd\n\n# Si hace falta instalar:\n# pip install ucimlrepo\n\niris = fetch_ucirepo(id=53)\nX = iris.data.features\ny = iris.data.targets\n\ndf = pd.concat([X, y], axis=1)\ndf.head()',
+    rows:[{campo:'id=53',contenido:'identificador del dataset Iris en UCI'},{campo:'instancias',contenido:'150 filas'},{campo:'features',contenido:'4 variables numéricas'},{campo:'target',contenido:'clase de planta iris'}],
+    cols:['campo','contenido']
+  }
+];
+let activeSource = 'url';
+function renderSources(){
+  document.getElementById('sourceGrid').innerHTML = dataSources.map(s=>`<button class="source-btn ${s.key===activeSource?'active':''}" data-source="${s.key}"><b>${s.name}</b><span>${s.note}</span></button>`).join('');
+  const src = dataSources.find(s=>s.key===activeSource) || dataSources[0];
+  document.getElementById('sourceUse').innerHTML = `<b>Cuándo usarlo</b>${src.use}`;
+  document.getElementById('sourceLinkBox').innerHTML = `<b>URL</b><a class="source-link" href="${src.link}" target="_blank" rel="noopener">${src.linkLabel}</a>`;
+  document.getElementById('sourceCode').textContent = src.code;
+  document.getElementById('sourcePreview').innerHTML = table(src.rows, src.cols);
+  document.getElementById('sourceExtra').innerHTML = src.extra || '';
+}
+document.getElementById('sourceGrid').addEventListener('click', e=>{ const btn=e.target.closest('[data-source]'); if(!btn)return; activeSource=btn.dataset.source; renderSources(); });
+function init(){ document.getElementById('filterCol').innerHTML=numericCols.map(c=>`<option value="${c}">${c}</option>`).join(''); document.getElementById('filterCol').value='petal_length'; document.getElementById('metricCol').innerHTML=numericCols.map(c=>`<option value="${c}">${c}</option>`).join(''); document.getElementById('metricCol').value='petal_length'; renderLoadCode(); renderExplore(); renderSelect(); renderFilter(); renderTransform(); renderGroup(); renderMerge(); renderFlow(); renderCheat(); renderSources(); }
+init();
+</script>
+</body>
+</html>
