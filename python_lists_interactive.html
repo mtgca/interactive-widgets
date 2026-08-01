@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listas en Python: Explorador Interactivo</title>
+<style>
+  :root{
+    --bg:#f8f9fb; --card:#ffffff; --ink:#2d3436; --muted:#6b7684;
+    --accent:#4f7df3; --accent-soft:#e8effe; --good:#2f9e44; --bad:#e03131;
+    --border:#e1e6ef;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); margin:0; padding:24px 16px 60px;
+  }
+  h1{text-align:center; margin:6px 0 2px; color:var(--ink); font-size:26px;}
+  .subtitle{text-align:center; color:var(--muted); margin:0 0 28px; font-size:15px;}
+  .wrap{max-width:960px; margin:0 auto;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:20px 22px; margin-bottom:20px; box-shadow:0 2px 8px rgba(20,30,60,.04);
+  }
+  .card h2{margin:0 0 4px; font-size:17px;}
+  .card .hint{color:var(--muted); font-size:13px; margin:0 0 14px;}
+
+  /* --- list visualization --- */
+  .list-row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; min-height:56px;}
+  .cell{
+    position:relative; min-width:52px; padding:10px 12px; background:var(--accent-soft);
+    border:1.5px solid #c7d6fb; border-radius:8px; text-align:center; font-weight:600;
+    cursor:grab; user-select:none;
+  }
+  .cell:active{cursor:grabbing;}
+  .cell .idx{
+    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    font-size:11px; font-weight:600; color:var(--muted);
+  }
+  .cell .nidx{
+    position:absolute; bottom:-18px; left:50%; transform:translateX(-50%);
+    font-size:11px; font-weight:500; color:#b0899a;
+  }
+  .cell.highlight{background:#fff3bf; border-color:#f5c400;}
+  .cell.batch-pick{background:#e6fcf0; border-color:#51cf66;}
+  .cell.removing{background:#ffe3e3; border-color:#e03131;}
+  .cell.drag-over{border-color:#4f7df3; border-style:dashed;}
+  .cell.new{animation:pop .3s ease;}
+  @keyframes pop{ from{transform:scale(.6); opacity:0;} to{transform:scale(1); opacity:1;} }
+  .empty-note{color:var(--muted); font-size:14px; font-style:italic;}
+  .drag-hint{color:var(--muted); font-size:12px; margin:8px 0 0;}
+
+  /* --- flying chip clone for batch animation --- */
+  .flying-chip{
+    position:fixed; z-index:5000; padding:10px 12px; border-radius:8px; font-weight:700;
+    background:#51cf66; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.18); pointer-events:none;
+    transition:transform .55s cubic-bezier(.2,.8,.2,1), opacity .55s ease .35s;
+  }
+
+  /* --- mini-batch tray --- */
+  .batch-tray{
+    min-height:64px; border:2px dashed #c7d6fb; border-radius:10px; background:#fafcff;
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px; margin-top:14px;
+  }
+  .batch-tray .chip{
+    padding:9px 12px; border-radius:8px; font-weight:700; background:#51cf66; color:#fff;
+    animation:pop .3s ease;
+  }
+  .batch-meta{display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-top:10px;}
+  .batch-meta b{color:var(--ink);}
+
+  /* --- controls --- */
+  .ops{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
+  .op{
+    display:flex; align-items:center; gap:6px; background:#fafbfe; border:1px solid var(--border);
+    border-radius:8px; padding:8px 10px;
+  }
+  .op label{font-size:12px; color:var(--muted); font-weight:600;}
+  .op input{
+    width:64px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px;
+  }
+  button{
+    cursor:pointer; border:none; border-radius:7px; padding:8px 14px; font-size:13px; font-weight:600;
+    background:var(--accent); color:#fff; transition:filter .15s ease;
+  }
+  button:hover{filter:brightness(1.08);}
+  button.secondary{background:#eef1f8; color:var(--ink);}
+  button.danger{background:#fff0f0; color:var(--bad); border:1px solid #ffd2d2;}
+  button.danger:hover{background:#ffe3e3;}
+
+  .code-line{
+    font-family:Consolas,"SF Mono",Menlo,monospace; background:#1e1f29; color:#f5f5f7;
+    border-radius:8px; padding:10px 14px; font-size:13.5px; margin-top:14px; overflow-x:auto;
+  }
+  .code-line .comment{color:#9aa0b0;}
+  .code-line .out{color:#7fd88f;}
+  .code-line .err{color:#ff8787;}
+
+  /* --- slicing --- */
+  .slice-controls{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; margin-top:6px;}
+  .slice-controls .op input{width:56px;}
+  .slice-result{margin-top:14px;}
+
+  /* --- comprehension builder --- */
+  .comp-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-family:Consolas,"SF Mono",monospace; font-size:15px;}
+  .comp-row select, .comp-row input[type=text]{
+    padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px; font-family:inherit;
+  }
+  .comp-row input[type=text]{width:100px;}
+  .comp-token{color:var(--accent); font-weight:700;}
+
+  /* --- nested list / matrix --- */
+  .matrix{display:inline-grid; gap:6px; margin-top:10px;}
+  .matrix .mcell{
+    width:48px; height:40px; display:flex; align-items:center; justify-content:center;
+    background:var(--accent-soft); border:1.5px solid #c7d6fb; border-radius:6px; font-weight:600;
+  }
+  .matrix .mcell.sel{background:#fff3bf; border-color:#f5c400;}
+
+  footer{text-align:center; color:var(--muted); font-size:12px; margin-top:30px;}
+</style>
+</head>
+<body>
+
+<div class="corner-controls">
+  <a href="index.html" class="back-to-index">&larr; Back to index</a>
+  <div class="verify-badge" data-verified="false" data-author="jdVegaS24"></div>
+</div>
+<style>
+.corner-controls{position:fixed;top:10px;right:10px;z-index:9999;
+  display:flex;align-items:center;gap:8px;}
+.back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;
+  border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);transition:border-color .15s ease,color .15s ease;}
+.back-to-index:hover{border-color:#4f7df3;color:#4f7df3;}
+.verify-badge{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:6px 12px;border-radius:999px;display:flex;align-items:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap;}
+.verify-badge[data-verified="true"]{background:#e6fcf0;color:#2f9e44;border:1px solid #b2f2ce;}
+.verify-badge[data-verified="true"]::before{content:"\2713 Expert-verified";}
+.verify-badge[data-verified="false"]{background:#fff9db;color:#e8a800;border:1px solid #ffe066;}
+.verify-badge[data-verified="false"]::before{content:"\26A0 AI-generated \00B7 not expert-verified";}
+.verify-badge[data-author]::after{content:"\00B7 by @" attr(data-author);opacity:.75;margin-left:4px;}
+</style>
+
+<h1>Listas en Python</h1>
+<p class="subtitle">Colección ordenada y mutable &mdash; explora índices, slicing, comprehensions y listas anidadas</p>
+
+<div class="wrap">
+
+  <!-- 1. Basic list playground -->
+  <div class="card">
+    <h2>1. La lista en vivo</h2>
+    <p class="hint">Agrega, elimina y modifica elementos. Los índices positivos y negativos se muestran arriba y abajo de cada celda. Puedes <strong>arrastrar</strong> las celdas para reordenarlas.</p>
+
+    <div class="list-row" id="listRow"></div>
+    <p class="drag-hint">&#8597; arrastra una celda sobre otra para reordenar (equivale a <code>notas.insert(j, notas.pop(i))</code>)</p>
+
+    <div class="ops">
+      <div class="op">
+        <label>append(x)</label>
+        <input type="text" id="appendVal" value="91">
+        <button onclick="doAppend()">Agregar</button>
+      </div>
+      <div class="op">
+        <label>insert(i, x)</label>
+        <input type="text" id="insertIdx" style="width:44px" value="0">
+        <input type="text" id="insertVal" value="0">
+        <button onclick="doInsert()">Insertar</button>
+      </div>
+      <div class="op">
+        <label>pop(i)</label>
+        <input type="text" id="popIdx" value="-1">
+        <button class="danger" onclick="doPop()">Quitar</button>
+      </div>
+      <div class="op">
+        <label>&nbsp;</label>
+        <button class="secondary" onclick="resetList()">Reiniciar</button>
+      </div>
+    </div>
+
+    <div class="code-line" id="listCode">&gt;&gt;&gt; notas = [85, 92, 78, 95, 88]</div>
+  </div>
+
+  <!-- 2. Indexing & slicing -->
+  <div class="card">
+    <h2>2. Indexado y slicing</h2>
+    <p class="hint">Prueba <code>notas[i]</code> o <code>notas[start:stop:step]</code> sobre la lista de arriba. Deja un campo vacío para omitirlo (equivale a <code>None</code> en el slice).</p>
+
+    <div class="slice-controls">
+      <div class="op">
+        <label>índice único</label>
+        <input type="text" id="singleIdx" placeholder="ej. 1 o -1">
+        <button onclick="doSingleIndex()">Ver</button>
+      </div>
+      <div class="op">
+        <label>start</label>
+        <input type="text" id="sliceStart" placeholder="0">
+      </div>
+      <div class="op">
+        <label>stop</label>
+        <input type="text" id="sliceStop" placeholder="len">
+      </div>
+      <div class="op">
+        <label>step</label>
+        <input type="text" id="sliceStep" placeholder="1">
+      </div>
+      <button onclick="doSlice()">Aplicar slice</button>
+    </div>
+
+    <div class="slice-result">
+      <div class="code-line" id="sliceCode">&gt;&gt;&gt; notas[1:3]</div>
+    </div>
+  </div>
+
+  <!-- 3. List comprehension builder -->
+  <div class="card">
+    <h2>3. Constructor de list comprehension</h2>
+    <p class="hint">Arma <code>[expr for x in iterable if cond]</code> paso a paso y mira el resultado evaluado sobre <code>notas</code>.</p>
+
+    <div class="comp-row">
+      <span class="comp-token">[</span>
+      <select id="compExpr">
+        <option value="x">x</option>
+        <option value="x**2">x**2</option>
+        <option value="x*2">x*2</option>
+        <option value="x-media">x - media</option>
+      </select>
+      <span class="comp-token">for x in</span>
+      <select id="compIter">
+        <option value="notas">notas</option>
+        <option value="range10">range(10)</option>
+      </select>
+      <span class="comp-token">if</span>
+      <select id="compCond">
+        <option value="none">(sin condición)</option>
+        <option value="ge80">x &gt;= 80</option>
+        <option value="even">x % 2 == 0</option>
+        <option value="lt90">x &lt; 90</option>
+      </select>
+      <span class="comp-token">]</span>
+      <button onclick="doComprehension()">Evaluar</button>
+    </div>
+
+    <div class="code-line" id="compCode">&gt;&gt;&gt; [x for x in notas]</div>
+  </div>
+
+  <!-- 4. Nested lists / matrix -->
+  <div class="card">
+    <h2>4. Listas anidadas como matriz</h2>
+    <p class="hint">Haz clic en una celda para ver cómo se accede a ella: <code>matriz[fila][columna]</code>.</p>
+
+    <div class="matrix" id="matrixGrid" style="grid-template-columns: repeat(3, 48px);"></div>
+
+    <div class="code-line" id="matrixCode">&gt;&gt;&gt; matriz[1][2]</div>
+  </div>
+
+  <!-- 5. Mini-batches for ML training -->
+  <div class="card">
+    <h2>5. De lista a mini-batches (así entrena un modelo)</h2>
+    <p class="hint">En ML, un dataset suele empezar como una simple lista. Antes de cada época se <strong>baraja</strong> (<code>random.shuffle</code>), y el optimizador consume la lista en <strong>mini-batches</strong> (<code>notas[i:i+batch_size]</code>) — sin quitar nada de la lista original.</p>
+
+    <div class="ops">
+      <div class="op">
+        <label>batch_size</label>
+        <input type="range" id="batchSize" min="1" max="5" value="2" oninput="document.getElementById('batchSizeVal').textContent=this.value">
+        <span id="batchSizeVal" style="font-weight:700; min-width:14px; text-align:center;">2</span>
+      </div>
+      <button onclick="shuffleList()">&#128256; Barajar (nueva época)</button>
+      <button onclick="nextBatch()">Siguiente mini-batch &rarr;</button>
+      <button class="secondary" onclick="resetBatching()">Reiniciar entrenamiento</button>
+    </div>
+
+    <div class="batch-tray" id="batchTray"><span class="empty-note">el mini-batch actual aparecerá aquí</span></div>
+
+    <div class="batch-meta">
+      <span>Época: <b id="epochVal">1</b></span>
+      <span>Paso dentro de la época: <b id="stepVal">0</b> / <b id="stepsPerEpochVal">3</b></span>
+    </div>
+
+    <div class="code-line" id="batchCode">&gt;&gt;&gt; lote = notas[0:2]  <span class="comment"># el modelo solo ve este pedazo en este paso</span></div>
+  </div>
+
+</div>
+
+<footer>Widget interactivo &middot; Estructuras de Python (Semana 1, Día 2) &middot; generado con IA, sin verificar por experto humano aún</footer>
+
+<script>
+/* ---------------- state ----------------
+   Each item is {id, val}: a stable `id` lets us FLIP-animate real
+   movement (reorder, shuffle, pop) instead of just redrawing values. */
+let nextId = 0;
+const mk = v => ({ id: nextId++, val: v });
+let notas = [85, 92, 78, 95, 88].map(mk);
+
+const vals = () => notas.map(o => o.val);
+const media = () => { const v = vals(); return v.reduce((a,b)=>a+b,0) / v.length; };
+
+/* ---------------- rendering: list (with FLIP animation) ---------------- */
+let draggedId = null;
+
+function renderList(highlightIdxs = []){
+  const row = document.getElementById('listRow');
+
+  // FIRST: capture current on-screen position of every existing cell
+  const firstRects = new Map();
+  Array.from(row.children).forEach(el => {
+    if(el.dataset && el.dataset.id !== undefined) firstRects.set(el.dataset.id, el.getBoundingClientRect());
+  });
+
+  row.innerHTML = '';
+  if(notas.length === 0){
+    row.innerHTML = '<span class="empty-note">[] — lista vacía</span>';
+    return;
+  }
+  notas.forEach((item, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.id = item.id;
+    cell.draggable = true;
+    if(highlightIdxs.includes(i)) cell.classList.add('highlight');
+    cell.innerHTML = `<span class="idx">${i}</span>${item.val}<span class="nidx">${i - notas.length}</span>`;
+    attachDragHandlers(cell, item.id);
+    row.appendChild(cell);
+  });
+
+  // LAST + INVERT + PLAY: diff new position against the old one and animate the gap away
+  Array.from(row.children).forEach(el => {
+    const first = firstRects.get(el.dataset.id);
+    if(!first){ el.classList.add('new'); return; }
+    const last = el.getBoundingClientRect();
+    const dx = first.left - last.left, dy = first.top - last.top;
+    if(dx || dy){
+      el.style.transition = 'none';
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform .35s cubic-bezier(.2,.8,.2,1)';
+        el.style.transform = '';
+      });
+    }
+  });
+}
+
+/* ---------------- drag & drop reordering ---------------- */
+function attachDragHandlers(cell, id){
+  cell.addEventListener('dragstart', e => {
+    draggedId = id;
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  cell.addEventListener('dragover', e => {
+    e.preventDefault();
+    cell.classList.add('drag-over');
+  });
+  cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+  cell.addEventListener('drop', e => {
+    e.preventDefault();
+    cell.classList.remove('drag-over');
+    if(draggedId === null || draggedId === id) return;
+    const fromIdx = notas.findIndex(o => o.id === draggedId);
+    const toIdx = notas.findIndex(o => o.id === id);
+    if(fromIdx === -1 || toIdx === -1) return;
+    const [moved] = notas.splice(fromIdx, 1);
+    notas.splice(toIdx, 0, moved);
+    renderList();
+    updateCode('listCode', `&gt;&gt;&gt; notas.insert(${toIdx}, notas.pop(${fromIdx}))<br><span class="comment"># reordenado a mano, ej. antes de partir train/val</span> <span class="out">${pyRepr(vals())}</span>`);
+    draggedId = null;
+  });
+}
+
+function updateCode(id, text){
+  document.getElementById(id).innerHTML = text;
+}
+
+function pyRepr(v){
+  if(Array.isArray(v)) return '[' + v.map(pyRepr).join(', ') + ']';
+  return String(v);
+}
+
+/* ---------------- ops: append / insert / pop ---------------- */
+function parseNum(str){
+  const n = Number(str);
+  return Number.isFinite(n) ? n : str;
+}
+
+function doAppend(){
+  const val = parseNum(document.getElementById('appendVal').value);
+  notas.push(mk(val));
+  renderList();
+  updateCode('listCode', `&gt;&gt;&gt; notas.append(${pyRepr(val)})<br><span class="comment"># notas ahora es</span> <span class="out">${pyRepr(vals())}</span>`);
+}
+
+function doInsert(){
+  let i = parseInt(document.getElementById('insertIdx').value, 10);
+  const val = parseNum(document.getElementById('insertVal').value);
+  if(Number.isNaN(i)){ updateCode('listCode', '<span class="err">IndexError: índice inválido</span>'); return; }
+  if(i < 0) i = Math.max(0, notas.length + i);
+  i = Math.min(i, notas.length);
+  notas.splice(i, 0, mk(val));
+  renderList();
+  updateCode('listCode', `&gt;&gt;&gt; notas.insert(${i}, ${pyRepr(val)})<br><span class="comment"># notas ahora es</span> <span class="out">${pyRepr(vals())}</span>`);
+}
+
+function doPop(){
+  let i = document.getElementById('popIdx').value.trim();
+  i = i === '' ? -1 : parseInt(i, 10);
+  if(Number.isNaN(i) || notas.length === 0 || i >= notas.length || i < -notas.length){
+    updateCode('listCode', `&gt;&gt;&gt; notas.pop(${i})<br><span class="err">IndexError: pop index out of range</span>`);
+    return;
+  }
+  const realIdx = i < 0 ? notas.length + i : i;
+  renderList([realIdx]);
+  setTimeout(() => {
+    const removed = notas.splice(realIdx, 1)[0];
+    renderList();
+    updateCode('listCode', `&gt;&gt;&gt; notas.pop(${i})<br><span class="out">${pyRepr(removed.val)}</span> <span class="comment"># notas ahora es</span> <span class="out">${pyRepr(vals())}</span>`);
+  }, 260);
+}
+
+function resetList(){
+  notas = [85, 92, 78, 95, 88].map(mk);
+  renderList();
+  updateCode('listCode', '&gt;&gt;&gt; notas = [85, 92, 78, 95, 88]');
+}
+
+/* ---------------- indexing / slicing ---------------- */
+function doSingleIndex(){
+  const raw = document.getElementById('singleIdx').value.trim();
+  if(raw === ''){ updateCode('sliceCode', '<span class="err">Escribe un índice, ej. 1 o -1</span>'); return; }
+  const i = parseInt(raw, 10);
+  if(Number.isNaN(i) || i >= notas.length || i < -notas.length){
+    renderList();
+    updateCode('sliceCode', `&gt;&gt;&gt; notas[${raw}]<br><span class="err">IndexError: list index out of range</span>`);
+    return;
+  }
+  const realIdx = i < 0 ? notas.length + i : i;
+  renderList([realIdx]);
+  updateCode('sliceCode', `&gt;&gt;&gt; notas[${raw}]<br><span class="out">${pyRepr(notas[realIdx].val)}</span>`);
+}
+
+function doSlice(){
+  const s = document.getElementById('sliceStart').value.trim();
+  const e = document.getElementById('sliceStop').value.trim();
+  const st = document.getElementById('sliceStep').value.trim();
+
+  const start = s === '' ? undefined : parseInt(s, 10);
+  const stop  = e === '' ? undefined : parseInt(e, 10);
+  const step  = st === '' ? 1 : parseInt(st, 10);
+
+  if(step === 0){
+    updateCode('sliceCode', `&gt;&gt;&gt; notas[${s}:${e}:${st}]<br><span class="err">ValueError: slice step cannot be zero</span>`);
+    return;
+  }
+
+  const {result, idxs} = pySlice(vals(), start, stop, step);
+  renderList(idxs);
+  const label = `${s}:${e}${st !== '' ? ':' + st : ''}`;
+  updateCode('sliceCode', `&gt;&gt;&gt; notas[${label}]<br><span class="out">${pyRepr(result)}</span>`);
+}
+
+function pySlice(arr, start, stop, step){
+  const n = arr.length;
+  step = step || 1;
+  let idxs = [];
+  if(step > 0){
+    let lo = start === undefined ? 0 : (start < 0 ? Math.max(n + start, 0) : Math.min(start, n));
+    let hi = stop === undefined ? n : (stop < 0 ? Math.max(n + stop, 0) : Math.min(stop, n));
+    for(let i = lo; i < hi; i += step) idxs.push(i);
+  } else {
+    let lo = start === undefined ? n - 1 : (start < 0 ? n + start : Math.min(start, n - 1));
+    let hi = stop === undefined ? -1 : (stop < 0 ? n + stop : stop);
+    for(let i = lo; i > hi; i += step) idxs.push(i);
+  }
+  idxs = idxs.filter(i => i >= 0 && i < n);
+  return { result: idxs.map(i => arr[i]), idxs };
+}
+
+/* ---------------- comprehension builder ---------------- */
+function doComprehension(){
+  const exprKey = document.getElementById('compExpr').value;
+  const iterKey = document.getElementById('compIter').value;
+  const condKey = document.getElementById('compCond').value;
+
+  const iterable = iterKey === 'notas' ? vals() : Array.from({length:10}, (_,i)=>i);
+  const m = media();
+
+  const exprFn = {
+    'x': x => x,
+    'x**2': x => x*x,
+    'x*2': x => x*2,
+    'x-media': x => Math.round((x - m)*100)/100,
+  }[exprKey];
+
+  const condFn = {
+    'none': () => true,
+    'ge80': x => x >= 80,
+    'even': x => x % 2 === 0,
+    'lt90': x => x < 90,
+  }[condKey];
+
+  const result = iterable.filter(condFn).map(exprFn);
+
+  const iterLabel = iterKey === 'notas' ? 'notas' : 'range(10)';
+  const condLabel = condKey === 'none' ? '' : ' if ' + document.getElementById('compCond').selectedOptions[0].text;
+  const exprLabel = document.getElementById('compExpr').selectedOptions[0].text;
+
+  updateCode('compCode', `&gt;&gt;&gt; [${exprLabel} for x in ${iterLabel}${condLabel}]<br><span class="out">${pyRepr(result)}</span>`);
+}
+
+/* ---------------- nested list / matrix ---------------- */
+const matriz = [[1,2,3],[4,5,6],[7,8,9]];
+function renderMatrix(){
+  const grid = document.getElementById('matrixGrid');
+  grid.innerHTML = '';
+  matriz.forEach((row, r) => {
+    row.forEach((val, c) => {
+      const cell = document.createElement('div');
+      cell.className = 'mcell';
+      cell.textContent = val;
+      cell.onclick = () => {
+        document.querySelectorAll('.mcell').forEach(el => el.classList.remove('sel'));
+        cell.classList.add('sel');
+        updateCode('matrixCode', `&gt;&gt;&gt; matriz[${r}][${c}]<br><span class="out">${val}</span>`);
+      };
+      grid.appendChild(cell);
+    });
+  });
+}
+
+/* ---------------- mini-batches for ML training ---------------- */
+let batchPointer = 0, epoch = 1, stepInEpoch = 0;
+
+function stepsPerEpoch(){
+  const bs = parseInt(document.getElementById('batchSize').value, 10);
+  return Math.max(1, Math.ceil(notas.length / bs));
+}
+
+function shuffleList(){
+  // Fisher-Yates — mirrors random.shuffle() before each epoch
+  for(let i = notas.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [notas[i], notas[j]] = [notas[j], notas[i]];
+  }
+  batchPointer = 0; stepInEpoch = 0; epoch++;
+  renderList();
+  document.getElementById('epochVal').textContent = epoch;
+  document.getElementById('stepVal').textContent = stepInEpoch;
+  document.getElementById('stepsPerEpochVal').textContent = stepsPerEpoch();
+  document.getElementById('batchTray').innerHTML = '<span class="empty-note">el mini-batch actual aparecerá aquí</span>';
+  updateCode('batchCode', `&gt;&gt;&gt; random.shuffle(notas)  <span class="comment"># nueva época ${epoch}, orden mezclado</span><br><span class="out">${pyRepr(vals())}</span>`);
+}
+
+function nextBatch(){
+  if(notas.length === 0) return;
+  const bs = parseInt(document.getElementById('batchSize').value, 10);
+  const n = notas.length;
+  const idxs = [];
+  for(let k = 0; k < bs && k < n; k++) idxs.push((batchPointer + k) % n);
+
+  stepInEpoch++;
+  if(batchPointer + bs >= n){
+    // epoch finished — loop back and mark it, but don't auto-shuffle (that's an explicit action)
+    batchPointer = (batchPointer + bs) % n;
+  } else {
+    batchPointer += bs;
+  }
+
+  renderList();
+  const row = document.getElementById('listRow');
+  idxs.forEach(i => row.children[i] && row.children[i].classList.add('batch-pick'));
+
+  flyToTray(idxs);
+
+  document.getElementById('stepVal').textContent = stepInEpoch;
+  document.getElementById('stepsPerEpochVal').textContent = stepsPerEpoch();
+  const v = vals();
+  const batchVals = idxs.map(i => v[i]);
+  const label = idxs.length === bs ? `${idxs[0]}:${idxs[0]+bs}` : `${idxs[0]}: (wrap-around)`;
+  updateCode('batchCode', `&gt;&gt;&gt; lote = notas[${label}]<br><span class="out">${pyRepr(batchVals)}</span> <span class="comment"># esto es lo único que ve el optimizador en este paso</span>`);
+}
+
+function flyToTray(idxs){
+  const row = document.getElementById('listRow');
+  const tray = document.getElementById('batchTray');
+  tray.innerHTML = '';
+  const trayRect = tray.getBoundingClientRect();
+
+  idxs.forEach((i, order) => {
+    const cell = row.children[i];
+    if(!cell) return;
+    const r = cell.getBoundingClientRect();
+    const chip = document.createElement('div');
+    chip.className = 'flying-chip';
+    chip.textContent = cell.textContent.trim();
+    chip.style.left = r.left + 'px';
+    chip.style.top = r.top + 'px';
+    chip.style.width = r.width + 'px';
+    document.body.appendChild(chip);
+
+    const targetX = trayRect.left + 12 + order * 58;
+    const targetY = trayRect.top + 12;
+    requestAnimationFrame(() => {
+      chip.style.transform = `translate(${targetX - r.left}px, ${targetY - r.top}px) scale(.9)`;
+      chip.style.opacity = '0';
+    });
+    setTimeout(() => chip.remove(), 620);
+  });
+
+  setTimeout(() => {
+    const v = vals();
+    tray.innerHTML = '';
+    idxs.forEach(i => {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.textContent = v[i];
+      tray.appendChild(chip);
+    });
+  }, 560);
+}
+
+function resetBatching(){
+  notas = [85, 92, 78, 95, 88].map(mk);
+  batchPointer = 0; epoch = 1; stepInEpoch = 0;
+  renderList();
+  document.getElementById('epochVal').textContent = epoch;
+  document.getElementById('stepVal').textContent = stepInEpoch;
+  document.getElementById('stepsPerEpochVal').textContent = stepsPerEpoch();
+  document.getElementById('batchTray').innerHTML = '<span class="empty-note">el mini-batch actual aparecerá aquí</span>';
+  updateCode('batchCode', '&gt;&gt;&gt; lote = notas[0:2]  <span class="comment"># el modelo solo ve este pedazo en este paso</span>');
+}
+
+/* ---------------- init ---------------- */
+renderList();
+renderMatrix();
+document.getElementById('stepsPerEpochVal').textContent = stepsPerEpoch();
+</script>
+
+</body>
+</html>
