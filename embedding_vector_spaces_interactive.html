@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embeddings y espacios vectoriales</title>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#5d6b82;--line:#dbe3ef;
+  --blue:#4f7df3;--blue-soft:#e7efff;--green:#2f9e62;--green-soft:#e7f8ef;
+  --orange:#c77b16;--orange-soft:#fff4d7;--red:#d9485f;--red-soft:#fff0f2;
+  --purple:#7c4bb3;--purple-soft:#f4eafe;--code:#1d202b;--row:#f8faff;
+}
+body.dark{
+  --bg:#111827;--card:#182234;--ink:#eef2ff;--muted:#bac5d9;--line:#344158;
+  --blue:#8fb1ff;--blue-soft:#25385f;--green:#67d99b;--green-soft:#173a2a;
+  --orange:#f4c15d;--orange-soft:#3c3215;--red:#ff91a3;--red-soft:#3d2028;
+  --purple:#d2adff;--purple-soft:#332348;--code:#0d111c;--row:#202b40;
+}
+*{box-sizing:border-box}body{margin:0;padding:24px 16px 56px;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.5}
+.wrap{max-width:1200px;margin:auto}.corner{position:fixed;right:12px;top:10px;z-index:50;display:flex;gap:8px}.corner a,.icon-btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:7px;padding:7px 10px;text-decoration:none;font-weight:700;font-size:12px;box-shadow:0 2px 7px rgba(20,30,60,.12)}
+h1{text-align:center;font-size:29px;letter-spacing:0;margin:38px 0 4px}.subtitle{text-align:center;color:var(--muted);max-width:820px;margin:0 auto 20px;font-size:15px}
+.tabs{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tab{border:1px solid #cbd7e5;background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;font-weight:750;cursor:pointer}.tab:hover,.tab.active{border-color:var(--blue);color:var(--blue)}.tab.active{background:var(--blue);color:#fff}
+.panel{display:none}.panel.active{display:block}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(20,30,60,.04)}
+.card h2{font-size:19px;margin:0 0 5px}.card h3{font-size:15px;margin:0 0 8px}.hint{font-size:13px;color:var(--muted);margin:0 0 14px}.controls{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:10px 0}.control{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--row);border-radius:8px;padding:7px 9px}label{font-size:12px;font-weight:750;color:var(--muted)}
+button,select,input,textarea{font:inherit}button{border:0;border-radius:7px;background:var(--blue);color:#fff;padding:8px 12px;font-size:13px;font-weight:750;cursor:pointer}button:hover{filter:brightness(1.08);transform:translateY(-1px)}button.secondary{background:var(--row);color:var(--ink);border:1px solid var(--line)}button.good{background:var(--green)}button.warn{background:var(--orange)}button:disabled{opacity:.45;cursor:not-allowed;transform:none}select,input,textarea{border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);padding:7px 8px}input[type=range]{padding:0;width:145px}textarea{width:100%;min-height:64px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stage{border:1px solid var(--line);background:var(--row);padding:13px;border-radius:8px;min-height:140px}.stage.active{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 18%,transparent)}
+.tokens,.chips{display:flex;flex-wrap:wrap;gap:7px}.token,.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}.token.selected,.chip.active{background:var(--blue);border-color:var(--blue);color:#fff}.vector-cells{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}.cell{min-width:38px;text-align:center;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:7px 5px;font:700 12px Consolas,monospace}.cell.hot{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.pipeline-flow{display:grid;grid-template-columns:minmax(190px,.72fr) 46px minmax(220px,.8fr) 46px minmax(400px,1.35fr);gap:10px;align-items:stretch}.pipeline-stage{border:1px solid var(--line);background:var(--row);border-radius:9px;padding:16px;min-height:400px;display:flex;flex-direction:column}.pipeline-stage h3{text-align:center;color:var(--blue);text-transform:uppercase;font-size:13px;letter-spacing:.04em}.pipe-arrow{align-self:center;text-align:center;color:var(--blue);font-size:24px;font-weight:800}.pipe-arrow small{display:block;color:var(--muted);font-size:11px;line-height:1.25;margin-top:6px}.vocab-table{width:100%;border-collapse:collapse;margin:10px auto 0;font-size:13px}.vocab-table th,.vocab-table td{border:1px solid var(--line);padding:8px;text-align:center}.vocab-table th{background:var(--blue-soft)}.vocab-table tbody tr{cursor:pointer}.vocab-table tbody tr:hover td{background:var(--blue-soft)}.vocab-table tr.selected td{background:var(--orange-soft);border-color:var(--orange);font-weight:800}.stage-note{border-top:1px dashed var(--line);margin-top:auto;padding-top:12px;text-align:center;color:var(--muted);font-size:12px}.onehot-read{text-align:center;font-size:13px;margin:4px 0 10px}.onehot-column{display:grid;grid-template-columns:auto 42px;justify-content:center;gap:4px 8px;align-items:center}.onehot-label{text-align:right;color:var(--muted);font-size:11px}.onehot-label.selected{color:var(--orange);font-weight:800}.onehot-value{border:1px solid var(--line);background:var(--card);border-radius:5px;text-align:center;padding:6px;font:700 12px Consolas,monospace}.onehot-value.selected{border-color:var(--orange);background:var(--orange-soft);color:var(--orange)}.embedding-layout{display:grid;grid-template-columns:minmax(260px,1fr) 30px 58px;gap:9px;align-items:center;margin-top:8px}.embedding-matrix{display:grid;grid-template-columns:24px repeat(4,minmax(48px,1fr));gap:4px;align-items:center}.matrix-index{text-align:center;color:var(--muted);font-size:11px}.matrix-value{border:1px solid var(--line);background:var(--card);border-radius:5px;padding:7px 4px;text-align:center;font:12px Consolas,monospace;color:var(--muted)}.matrix-value.selected{border-color:var(--orange);background:var(--orange-soft);color:var(--orange);font-weight:800}.lookup-arrow{text-align:center;color:var(--blue);font-size:22px}.dense-column{display:grid;gap:4px}.dense-value{border:1px solid #c8d8ff;background:var(--blue-soft);color:var(--blue);border-radius:5px;text-align:center;padding:7px 3px;font:700 12px Consolas,monospace}.matrix-caption{text-align:center;color:var(--muted);font-size:12px;margin-top:3px}.pipeline-sentence{text-align:center;font-size:15px;margin:0 0 14px}.pipeline-sentence code{color:var(--blue);font-weight:800}.pipeline-stage.flash{animation:flash .5s ease}
+.code{background:var(--code);color:#f5f7ff;border-radius:8px;padding:12px 14px;white-space:pre-wrap;overflow:auto;font:13px/1.5 Consolas,"SFMono-Regular",monospace}.callout{border-left:4px solid var(--blue);background:var(--blue-soft);border-radius:7px;padding:10px 12px;font-size:13px}.callout.good{border-color:var(--green);background:var(--green-soft)}.callout.bad{border-color:var(--red);background:var(--red-soft)}
+.scene-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,.65fr);gap:14px}.scene-shell{position:relative;height:560px;min-height:460px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:radial-gradient(circle at 50% 40%,var(--blue-soft),var(--row) 58%)}#semanticCanvas{width:100%;height:100%;display:block}.scene-help{position:absolute;left:10px;bottom:9px;background:color-mix(in srgb,var(--card) 88%,transparent);border:1px solid var(--line);border-radius:6px;padding:5px 8px;color:var(--muted);font-size:11px;pointer-events:none}.legend{position:absolute;left:10px;top:10px;display:flex;gap:7px;flex-wrap:wrap;max-width:70%}.legend span{background:color-mix(in srgb,var(--card) 90%,transparent);border:1px solid var(--line);border-radius:5px;padding:3px 6px;font-size:11px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}.details{display:grid;gap:10px;align-content:start}.metric{border-bottom:1px solid var(--line);padding:0 0 9px}.metric b{display:block;font-size:11px;text-transform:uppercase;color:var(--muted)}.metric strong{font-size:17px}.neighbors{display:grid;gap:7px}.neighbor{display:grid;grid-template-columns:70px 1fr 42px;gap:6px;align-items:center;font-size:12px}.bar{height:10px;background:var(--row);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--blue)}
+.formula{text-align:center;font:700 18px Cambria,"Times New Roman",serif;margin:10px 0}.math-result{color:var(--purple)}
+.analogy-stage{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.plot-svg{width:100%;height:auto;border:1px solid var(--line);background:var(--row);border-radius:8px}.plot-svg text{fill:var(--ink);font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.plot-svg .axis{stroke:var(--muted);opacity:.5}.plot-svg .grid{stroke:var(--line)}.plot-svg .arrowline{stroke:var(--blue);stroke-width:3;fill:none}.plot-svg .target{fill:var(--purple)}
+.check-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.rule{border:1px solid var(--line);background:var(--row);border-radius:8px;padding:12px}.rule.pass{background:var(--green-soft);border-color:var(--green)}.rule.fail{background:var(--red-soft);border-color:var(--red)}.rule b{display:block;margin-bottom:4px}.rule span{font-size:12px;color:var(--muted)}
+.span-layout{display:grid;grid-template-columns:minmax(420px,1.25fr) minmax(280px,.75fr);gap:14px}.drag-target{cursor:grab}.drag-target:active{cursor:grabbing}
+.score{font-size:22px;font-weight:850;color:var(--blue)}.challenge{border:1px solid var(--line);border-radius:8px;padding:13px;margin:10px 0}.challenge.done{background:var(--green-soft);border-color:var(--green)}.feedback{font-size:12px;font-weight:700;min-height:20px;margin-top:7px}.flash{animation:flash .7s ease}@keyframes flash{45%{box-shadow:0 0 0 5px color-mix(in srgb,var(--blue) 22%,transparent)}}
+.footer{text-align:center;color:var(--muted);font-size:12px;margin-top:12px}
+@media(max-width:950px){.pipeline-flow{grid-template-columns:minmax(0,1fr);min-width:0}.pipe-arrow{transform:rotate(90deg);min-height:32px}.pipe-arrow small{display:none}.pipeline-stage{min-height:0;min-width:0}.embedding-layout{grid-template-columns:minmax(0,1fr) 24px 54px}}
+@media(max-width:850px){body{padding-top:54px}.corner{position:absolute}.scene-layout,.grid2,.grid3,.analogy-stage,.span-layout{grid-template-columns:1fr}.scene-shell{height:470px}.check-grid{grid-template-columns:1fr}h1{font-size:24px}.card{padding:15px}.span-layout{min-width:0}}
+@media(max-width:480px){.pipeline-stage{padding:12px}.embedding-layout{grid-template-columns:minmax(0,1fr) 18px 46px;gap:4px}.embedding-matrix{grid-template-columns:17px repeat(4,minmax(0,1fr));gap:3px}.matrix-value{padding:6px 1px;font-size:10px}.dense-value{padding:6px 1px;font-size:10px}.lookup-arrow{font-size:17px}.pipeline-sentence{font-size:13px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="corner"><a href="index.html">← Índice</a><button class="icon-btn" id="themeBtn" aria-label="Cambiar tema">◐ Tema</button></div>
+<main class="wrap">
+  <h1>Embeddings: el significado vive en un espacio vectorial</h1>
+  <p class="subtitle">Convierte palabras en vectores, explora su geometría y conecta embeddings con cierre y combinación lineal.</p>
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab active" data-tab="pipeline">1. Palabra → vector</button>
+    <button class="tab" data-tab="semantic">2. Espacio 3D</button>
+    <button class="tab" data-tab="direction">3. Direcciones</button>
+    <button class="tab" data-tab="closure">4. Espacio vectorial</button>
+    <button class="tab" data-tab="span">5. Span</button>
+    <button class="tab" data-tab="challenge">6. Desafío</button>
+  </nav>
+
+  <section class="panel active" id="pipeline">
+    <div class="card">
+      <h2>El recorrido: token → índice → one-hot → embedding denso</h2>
+      <p class="hint">Haz clic en cualquier token del vocabulario y síguelo por las tres etapas. Este ejemplo usa la frase de las diapositivas y muestra solo cuatro coordenadas para que la matriz sea visible.</p>
+      <p class="pipeline-sentence">Frase: <code>"Me encanta el machine learning"</code></p>
+      <div class="pipeline-flow">
+        <div class="pipeline-stage" id="pipeStage1">
+          <h3>Etapa 1 · Vocabulario</h3>
+          <table class="vocab-table" aria-label="Vocabulario de la frase">
+            <thead><tr><th>Token</th><th>Índice i</th></tr></thead>
+            <tbody id="vocabRows"></tbody>
+          </table>
+          <div class="stage-note">Cada token único recibe un índice entero. Aquí <b>|V| = 5</b>.</div>
+        </div>
+        <div class="pipe-arrow">→<small>tokenizar<br>e indexar</small></div>
+        <div class="pipeline-stage" id="pipeStage2">
+          <h3>Etapa 2 · Codificación one-hot</h3>
+          <div class="onehot-read" id="indexRead"></div>
+          <div class="onehot-column" id="oneHot"></div>
+          <div class="matrix-caption">v<sub>one-hot</sub> · forma |V| × 1</div>
+          <div class="stage-note"><b>Disperso, binario y de dimensión alta.</b> Solo una posición vale 1; por sí solo no contiene significado semántico.</div>
+        </div>
+        <div class="pipe-arrow">→<small>buscar la<br>fila i</small></div>
+        <div class="pipeline-stage" id="pipeStage3">
+          <h3>Etapa 3 · Embedding denso</h3>
+          <div class="onehot-read">Matriz didáctica de embeddings E · |V| × 4</div>
+          <div class="embedding-layout">
+            <div class="embedding-matrix" id="embeddingMatrix"></div>
+            <div class="lookup-arrow">→</div>
+            <div class="dense-column" id="denseVector"></div>
+          </div>
+          <div class="matrix-caption" id="embeddingRead"></div>
+          <div class="stage-note"><b>Denso, continuo y aprendido.</b> La fila seleccionada es el vector del token. La fila de <i>machine</i> conserva las coordenadas mostradas en la diapositiva; los demás valores son didácticos. En BERT, cada token vive en <b>ℝ⁷⁶⁸</b>.</div>
+        </div>
+      </div>
+      <div class="callout" id="pipelineInsight" style="margin-top:14px"><b>Idea clave:</b> el one-hot sirve para identificar el token; la fila de E lo convierte en un vector numérico donde pueden aparecer relaciones semánticas.</div>
+      <div class="code" id="pipelineCode" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="semantic">
+    <div class="card">
+      <h2>Espacio semántico tridimensional</h2>
+      <p class="hint">Antes del entrenamiento, los embeddings suelen comenzar con valores casi aleatorios. Al aprender de contextos, palabras relacionadas terminan ocupando direcciones y regiones cercanas.</p>
+      <div class="callout" style="margin-bottom:12px"><b>¿Qué significa entrenar aquí?</b> Esta es una simulación didáctica: cada época mueve gradualmente los puntos hacia una organización semántica preparada. No se está entrenando una red real. En un modelo real, un corpus produce ejemplos, una función de pérdida mide el error y backpropagation actualiza las coordenadas de los embeddings.</div>
+      <div class="controls">
+        <button id="trainBtn">▶ Simular entrenamiento</button><button class="secondary" id="pauseBtn">Ⅱ Pausa</button><button class="secondary" id="stepBtn">Simular una época</button><button class="secondary" id="resetSceneBtn">↺ Posiciones iniciales</button>
+        <div class="control"><label for="speed">Velocidad <span id="speedValue">1.0×</span></label><input id="speed" type="range" min="0.3" max="2" value="1" step="0.1"></div>
+      </div>
+      <div class="scene-layout">
+        <div class="scene-shell" id="sceneShell">
+          <canvas id="semanticCanvas" aria-label="Espacio semántico tridimensional interactivo"></canvas>
+          <div class="legend"><span><i class="dot" style="background:#2f9e62"></i>animales</span><span><i class="dot" style="background:#7c4bb3"></i>personas</span><span><i class="dot" style="background:#c77b16"></i>lugares</span><span><i class="dot" style="background:#4f7df3"></i>tecnología</span></div>
+          <div class="scene-help">Arrastra para rotar · rueda para zoom · click para seleccionar</div>
+        </div>
+        <aside class="card details" style="margin:0;box-shadow:none">
+          <div class="metric"><b>Estado</b><strong id="epochRead">época 0 · aleatorio</strong></div>
+          <div class="metric"><b>Palabra seleccionada</b><strong id="selectedWord">gato</strong></div>
+          <div class="metric"><b>Embedding</b><code id="selectedVector">[0, 0, 0]</code></div>
+          <div><h3>Vecinos por coseno</h3><div class="neighbors" id="neighborList"></div></div>
+          <div class="callout good" id="semanticInsight">La cercanía geométrica representa similitud semántica. Los vecinos se ordenan mediante similitud coseno: compara el ángulo entre vectores.</div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="direction">
+    <div class="card">
+      <h2>Relaciones semánticas como direcciones</h2>
+      <p class="hint">La resta elimina una relación y la suma agrega otra. Observa cómo el resultado se acerca a una palabra conocida.</p>
+      <div class="controls">
+        <select id="wordA"></select><b>−</b><select id="wordB"></select><b>+</b><select id="wordC"></select><b>≈</b><strong class="math-result" id="analogyWord">?</strong>
+        <button id="analogyPlay">▶ Play</button><button class="secondary" id="analogyNext">Siguiente paso</button><button class="secondary" id="analogyReset">Reiniciar</button>
+      </div>
+      <div class="analogy-stage">
+        <svg class="plot-svg" id="analogyPlot" viewBox="0 0 520 390" role="img" aria-label="Aritmética de vectores semánticos"></svg>
+        <div>
+          <div class="formula" id="analogyFormula"></div>
+          <div class="code" id="analogyCode"></div>
+          <div class="callout" id="analogyInsight" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="closure">
+    <div class="card">
+      <h2>¿Qué hace que un conjunto sea un espacio vectorial?</h2>
+      <p class="hint">Prueba operaciones dentro de distintos conjuntos. Para ser subespacio debe contener al vector cero y permanecer cerrado bajo suma y multiplicación por escalar.</p>
+      <div class="controls"><div class="control"><label for="spaceSelect">Conjunto</label><select id="spaceSelect"><option value="plane">Plano z = 0</option><option value="line">Recta y = x, z = 0</option><option value="shifted">Plano desplazado z = 1</option></select></div><div class="control"><label for="scalar">Escalar α</label><input id="scalar" type="number" value="-2" step="0.5"></div><button id="testClosure">Probar reglas</button></div>
+      <div class="formula" id="closureOperation"></div>
+      <div class="check-grid" id="closureRules"></div>
+      <div class="callout" id="closureVerdict" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="span">
+    <div class="card">
+      <h2>Combinación lineal y espacio generado</h2>
+      <p class="hint">Mueve α y β o arrastra el punto objetivo. El <code>span</code> contiene todos los vectores que pueden escribirse como αv₁ + βv₂.</p>
+      <div class="controls"><div class="control"><label for="basisPreset">Vectores</label><select id="basisPreset"><option value="independent">Independientes</option><option value="dependent">Dependientes</option><option value="single">Un solo vector</option></select></div><div class="control"><label for="alpha">α = <span id="alphaRead">1</span></label><input id="alpha" type="range" min="-3" max="3" value="1" step="0.1"></div><div class="control"><label for="beta">β = <span id="betaRead">1</span></label><input id="beta" type="range" min="-3" max="3" value="1" step="0.1"></div></div>
+      <div class="span-layout">
+        <svg class="plot-svg" id="spanPlot" viewBox="0 0 560 440" role="img" aria-label="Combinaciones lineales de dos vectores"></svg>
+        <div>
+          <div class="formula" id="spanFormula"></div>
+          <div class="callout" id="spanResult"></div>
+          <div class="code" id="spanCode" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="challenge">
+    <div class="card">
+      <h2>Desafío final</h2><p class="hint">Aplica las ideas del recorrido. Cada respuesta correcta vale 1 punto.</p>
+      <div class="score">Puntuación: <span id="score">0</span>/3</div>
+      <div class="challenge" data-q="0"><b>1. ¿Qué expresa mejor que “gato” y “perro” estén cerca?</b><div class="controls"><button class="secondary answer" data-value="a">Tienen el mismo índice</button><button class="secondary answer" data-value="b">Aparecen en contextos similares</button><button class="secondary answer" data-value="c">Sus palabras tienen igual longitud</button></div><div class="feedback"></div></div>
+      <div class="challenge" data-q="1"><b>2. Si v₂ = 2v₁, ¿cuántas direcciones independientes generan?</b><div class="controls"><button class="secondary answer" data-value="a">Una</button><button class="secondary answer" data-value="b">Dos</button><button class="secondary answer" data-value="c">Tres</button></div><div class="feedback"></div></div>
+      <div class="challenge" data-q="2"><b>3. ¿Qué hace “Simular entrenamiento” en esta visualización?</b><div class="controls"><button class="secondary answer" data-value="a">Entrena BERT con Internet</button><button class="secondary answer" data-value="b">Cambia el índice de cada palabra</button><button class="secondary answer" data-value="c">Mueve gradualmente los embeddings hacia grupos semánticos preparados</button></div><div class="feedback"></div></div>
+      <button class="secondary" id="resetChallenge">Reiniciar desafío</button>
+    </div>
+  </section>
+  <p class="footer">Basado en la clase Semana 2: Espacios Vectoriales y Combinación Lineal.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===btn.dataset.tab));
+  if(btn.dataset.tab==='semantic') setTimeout(resizeScene,40);
+}));
+$('themeBtn').addEventListener('click',()=>{document.body.classList.toggle('dark');updateThreeTheme();});
+
+const WORDS=[
+ {w:'gato',g:'animal',t:[-2.4,1.2,.4]},{w:'perro',g:'animal',t:[-2.0,.8,.15]},{w:'tigre',g:'animal',t:[-2.25,1.65,.75]},
+ {w:'hombre',g:'persona',t:[.55,-1.4,-.35]},{w:'mujer',g:'persona',t:[.45,-.25,.3]},{w:'rey',g:'persona',t:[1.75,-1.35,.25]},{w:'reina',g:'persona',t:[1.65,-.2,.85]},
+ {w:'Quito',g:'lugar',t:[-.4,2.15,-1.0]},{w:'Loja',g:'lugar',t:[-.8,1.85,-1.25]},{w:'Ecuador',g:'lugar',t:[-.55,2.45,-.55]},
+ {w:'Python',g:'tech',t:[2.15,1.45,-.55]},{w:'NumPy',g:'tech',t:[2.45,1.1,-.25]}
+];
+const groupColor={animal:0x2f9e62,persona:0x7c4bb3,lugar:0xc77b16,tech:0x4f7df3};
+let selected='gato',epoch=0,training=false,sceneReady=false,scene,camera,renderer,wordGroup,raycaster,pointer,selectedArrow;
+let startPos=WORDS.map((_,i)=>[Math.sin(i*2.17)*2.7,Math.cos(i*1.31)*2.2,Math.sin(i*.83)*1.8]);
+let currentPos=startPos.map(v=>v.slice()),wordMeshes=[];
+function vecFor(w){const i=WORDS.findIndex(x=>x.w===w);return currentPos[i]}
+function targetFor(w){return WORDS.find(x=>x.w===w).t}
+function cosine(a,b){const dot=a.reduce((s,x,i)=>s+x*b[i],0),na=Math.hypot(...a),nb=Math.hypot(...b);return na&&nb?dot/(na*nb):0}
+function nearestTo(v,exclude=[]){return WORDS.filter(x=>!exclude.includes(x.w)).map(x=>({w:x.w,s:cosine(v,vecFor(x.w))})).sort((a,b)=>b.s-a.s)}
+
+const PIPE_TOKENS=['Me','encanta','el','machine','learning'];
+const PIPE_E=[
+ [.35,-.12,.48,.20],
+ [.68,.44,-.21,.57],
+ [-.08,.05,.02,-.11],
+ [.12,-1.70,.03,.44],
+ [.19,-1.42,.15,.61]
+];
+let pipelineSelection=3;
+function renderPipeline(){
+ const token=PIPE_TOKENS[pipelineSelection],vector=PIPE_E[pipelineSelection];
+ $('vocabRows').innerHTML=PIPE_TOKENS.map((word,i)=>`<tr data-index="${i}" class="${i===pipelineSelection?'selected':''}"><td>${word}</td><td>${i}</td></tr>`).join('');
+ $('vocabRows').querySelectorAll('tr').forEach(row=>row.addEventListener('click',()=>{pipelineSelection=+row.dataset.index;renderPipeline();flashPipeline()}));
+ $('indexRead').innerHTML=`Token seleccionado: <b>"${token}"</b> · índice <i>i</i> = ${pipelineSelection}`;
+ $('oneHot').innerHTML=PIPE_TOKENS.map((word,i)=>`<span class="onehot-label ${i===pipelineSelection?'selected':''}">${word} · ${i}</span><span class="onehot-value ${i===pipelineSelection?'selected':''}">${i===pipelineSelection?1:0}</span>`).join('');
+ $('embeddingMatrix').innerHTML=PIPE_E.map((row,i)=>`<span class="matrix-index ${i===pipelineSelection?'selected':''}">${i}</span>${row.map(value=>`<span class="matrix-value ${i===pipelineSelection?'selected':''}">${value.toFixed(2)}</span>`).join('')}`).join('');
+ $('denseVector').innerHTML=vector.map(value=>`<span class="dense-value">${value.toFixed(2)}</span>`).join('');
+ $('embeddingRead').innerHTML=`x<sub>${token}</sub> · cuatro coordenadas visibles de un vector en ℝ⁷⁶⁸`;
+ $('pipelineCode').textContent=`texto = "Me encanta el machine learning"\ntokens = texto.split()\n# ['Me', 'encanta', 'el', 'machine', 'learning']\n\nvocab = {token: i for i, token in enumerate(tokens)}\nindice = vocab["${token}"]  # ${pipelineSelection}\none_hot = np.eye(len(vocab))[indice]\nembedding = E[indice]\n# coordenadas visibles: [${vector.map(x=>x.toFixed(2)).join(', ')}]\n# en la diapositiva: x_${token} ∈ ℝ⁷⁶⁸`;
+}
+function flashPipeline(){[1,2,3].forEach((n,i)=>setTimeout(()=>{const stage=$('pipeStage'+n);stage.classList.remove('flash');void stage.offsetWidth;stage.classList.add('flash')},i*120))}
+renderPipeline();
+
+function initScene(){
+ if(!window.THREE){$('sceneShell').innerHTML='<div class="callout bad" style="margin:20px">No se pudo cargar Three.js. Conecta a Internet y vuelve a abrir el archivo.</div>';return}
+ const canvas=$('semanticCanvas');scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(48,1,.1,100);camera.position.set(0,0,9.2);renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ wordGroup=new THREE.Group();scene.add(wordGroup);const axes=new THREE.AxesHelper(3.7);axes.material.transparent=true;axes.material.opacity=.45;scene.add(axes);raycaster=new THREE.Raycaster();pointer=new THREE.Vector2();
+ WORDS.forEach((x,i)=>{const mesh=new THREE.Mesh(new THREE.SphereGeometry(.105,20,16),new THREE.MeshStandardMaterial({color:groupColor[x.g],roughness:.45}));mesh.userData={word:x.w,index:i};wordGroup.add(mesh);wordMeshes.push(mesh);const label=makeLabel(x.w);label.position.set(0,.23,0);mesh.add(label)});
+ scene.add(new THREE.AmbientLight(0xffffff,1.5));const light=new THREE.DirectionalLight(0xffffff,1.6);light.position.set(3,4,6);scene.add(light);
+ let dragging=false,lastX=0,lastY=0,moved=0;canvas.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;moved=0;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;moved+=Math.abs(dx)+Math.abs(dy);wordGroup.rotation.y+=dx*.008;wordGroup.rotation.x+=dy*.006;lastX=e.clientX;lastY=e.clientY});canvas.addEventListener('pointerup',e=>{dragging=false;if(moved<6)pickWord(e)});canvas.addEventListener('wheel',e=>{e.preventDefault();camera.position.z=Math.max(5.2,Math.min(13,camera.position.z+e.deltaY*.008))},{passive:false});
+ sceneReady=true;resizeScene();updateScene();animate();
+}
+function makeLabel(text){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.font='700 25px Segoe UI';x.textAlign='center';x.fillStyle='#ffffff';x.strokeStyle='rgba(0,0,0,.75)';x.lineWidth=5;x.strokeText(text,128,39);x.fillText(text,128,39);const tex=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));s.scale.set(1.25,.31,1);return s}
+function resizeScene(){if(!sceneReady)return;const box=$('sceneShell').getBoundingClientRect();renderer.setSize(box.width,box.height,false);camera.aspect=box.width/box.height;camera.updateProjectionMatrix()}
+window.addEventListener('resize',resizeScene);
+function pickWord(e){const r=$('semanticCanvas').getBoundingClientRect();pointer.x=((e.clientX-r.left)/r.width)*2-1;pointer.y=-((e.clientY-r.top)/r.height)*2+1;raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects(wordMeshes,false);if(hits[0]){selected=hits[0].object.userData.word;updateScene()}}
+function updateScene(){if(!sceneReady)return;wordMeshes.forEach((m,i)=>{m.position.set(...currentPos[i]);m.scale.setScalar(m.userData.word===selected?1.7:1)});if(selectedArrow)scene.remove(selectedArrow);const v=new THREE.Vector3(...vecFor(selected));selectedArrow=new THREE.ArrowHelper(v.clone().normalize(),new THREE.Vector3(),v.length(),0xff4f72,.18,.09);scene.add(selectedArrow);$('selectedWord').textContent=selected;$('selectedVector').textContent='['+vecFor(selected).map(x=>x.toFixed(2)).join(', ')+']';
+ const ns=nearestTo(vecFor(selected),[selected]).slice(0,4);$('neighborList').innerHTML=ns.map(n=>`<div class="neighbor"><b>${n.w}</b><span class="bar"><i style="width:${Math.max(0,n.s)*100}%"></i></span><span>${n.s.toFixed(2)}</span></div>`).join('');$('epochRead').textContent=epoch===0?'época 0 · aleatorio':`época ${epoch} · ${epoch>=100?'organizado':'aprendiendo'}`;
+}
+function trainStep(){epoch=Math.min(100,epoch+1);const p=epoch/100,ease=1-Math.pow(1-p,2);currentPos=WORDS.map((x,i)=>startPos[i].map((a,j)=>a+(x.t[j]-a)*ease));updateScene();if(epoch>=100)training=false}
+let last=0;function animate(t=0){requestAnimationFrame(animate);if(training&&t-last>90/(+$('speed').value)){trainStep();last=t}if(renderer)renderer.render(scene,camera)}
+$('trainBtn').onclick=()=>training=true;$('pauseBtn').onclick=()=>training=false;$('stepBtn').onclick=trainStep;$('resetSceneBtn').onclick=()=>{training=false;epoch=0;startPos=WORDS.map((_,i)=>[Math.sin((i+Date.now()%7)*2.17)*2.7,Math.cos((i+2)*1.31)*2.2,Math.sin((i+3)*.83)*1.8]);currentPos=startPos.map(v=>v.slice());updateScene()};$('speed').oninput=()=>{$('speedValue').textContent=(+$('speed').value).toFixed(1)+'×'};
+function updateThreeTheme(){if(renderer)renderer.render(scene,camera)}
+
+function fillWordSelects(){['wordA','wordB','wordC'].forEach(id=>{$(id).innerHTML=WORDS.map(x=>`<option>${x.w}</option>`).join('')});$('wordA').value='rey';$('wordB').value='hombre';$('wordC').value='mujer'}fillWordSelects();
+let analogyStep=0,analogyTimer=null;function targetAnalogy(){const a=targetFor($('wordA').value),b=targetFor($('wordB').value),c=targetFor($('wordC').value);return a.map((x,i)=>x-b[i]+c[i])}
+function nearestTarget(v,exclude){return WORDS.filter(x=>!exclude.includes(x.w)).map(x=>({w:x.w,d:Math.hypot(...x.t.map((n,i)=>n-v[i]))})).sort((a,b)=>a.d-b.d)[0]}
+function renderAnalogy(){const A=$('wordA').value,B=$('wordB').value,C=$('wordC').value,v=targetAnalogy(),best=nearestTarget(v,[A,B,C]);$('analogyWord').textContent=best.w;$('analogyFormula').innerHTML=`<span>${A}</span> − <span>${B}</span> + <span>${C}</span> = <span class="math-result">[${v.map(x=>x.toFixed(2)).join(', ')}]</span>`;$('analogyCode').textContent=`resultado = E["${A}"] - E["${B}"] + E["${C}"]\nmas_cercana = "${best.w}"`;$('analogyInsight').innerHTML=`La dirección <b>${A} − ${B}</b> se conserva al comenzar desde <b>${C}</b>. El resultado queda más cerca de <b>${best.w}</b>.`;
+ const svg=$('analogyPlot'),pts=[{n:A,v:targetFor(A)},{n:B,v:targetFor(B)},{n:C,v:targetFor(C)},{n:'resultado',v}],sx=x=>260+x*83,sy=y=>200-y*70;let s='<defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>';for(let i=-3;i<=3;i++){s+=`<line class="grid" x1="${sx(i)}" y1="30" x2="${sx(i)}" y2="360"/><line class="grid" x1="35" y1="${sy(i)}" x2="490" y2="${sy(i)}"/>`}s+=`<line class="axis" x1="35" y1="200" x2="490" y2="200"/><line class="axis" x1="260" y1="25" x2="260" y2="365"/>`;
+ pts.forEach((p,i)=>{if(i<=analogyStep){s+=`<line class="arrowline" x1="260" y1="200" x2="${sx(p.v[0])}" y2="${sy(p.v[1])}" marker-end="url(#arr)" style="opacity:${i===3?1:.65}"/>`;s+=`<circle class="${i===3?'target':''}" cx="${sx(p.v[0])}" cy="${sy(p.v[1])}" r="${i===3?8:6}"/><text x="${sx(p.v[0])+8}" y="${sy(p.v[1])-9}">${p.n}</text>`}});svg.innerHTML=s;
+}
+['wordA','wordB','wordC'].forEach(id=>$(id).onchange=()=>{analogyStep=3;renderAnalogy()});$('analogyNext').onclick=()=>{analogyStep=Math.min(3,analogyStep+1);renderAnalogy()};$('analogyReset').onclick=()=>{clearInterval(analogyTimer);analogyStep=0;renderAnalogy()};$('analogyPlay').onclick=()=>{clearInterval(analogyTimer);analogyStep=0;renderAnalogy();analogyTimer=setInterval(()=>{analogyStep++;renderAnalogy();if(analogyStep>=3)clearInterval(analogyTimer)},650)};renderAnalogy();
+
+const spaces={plane:{u:[1,2,0],v:[-2,1,0],zero:true,name:'plano z = 0'},line:{u:[1,1,0],v:[-2,-2,0],zero:true,name:'recta y = x, z = 0'},shifted:{u:[1,2,1],v:[-2,1,1],zero:false,name:'plano desplazado z = 1'}};
+function renderClosure(){const S=spaces[$('spaceSelect').value],a=+$('scalar').value,sum=S.u.map((x,i)=>x+S.v[i]),scaled=S.u.map(x=>a*x);const sumPass=$('spaceSelect').value==='plane'||$('spaceSelect').value==='line',scalePass=$('spaceSelect').value!=='shifted';$('closureOperation').textContent=`u + v = [${sum.join(', ')}]     ·     ${a}u = [${scaled.join(', ')}]`;
+ const rules=[['Contiene 0',S.zero,'El vector cero debe pertenecer al conjunto.'],['Cierre bajo suma',sumPass,`u + v ${sumPass?'permanece':'sale'} del conjunto.`],['Cierre bajo escalares',scalePass,`${a}u ${scalePass?'permanece':'sale'} del conjunto.`]];$('closureRules').innerHTML=rules.map(r=>`<div class="rule ${r[1]?'pass':'fail'}"><b>${r[1]?'✓':'×'} ${r[0]}</b><span>${r[2]}</span></div>`).join('');const ok=rules.every(r=>r[1]);$('closureVerdict').className='callout '+(ok?'good':'bad');$('closureVerdict').innerHTML=ok?`<b>Sí es subespacio vectorial.</b> ${S.name} supera las tres pruebas.`:`<b>No es subespacio vectorial.</b> Basta que falle una regla para descartarlo.`}
+$('testClosure').onclick=renderClosure;$('spaceSelect').onchange=renderClosure;$('scalar').oninput=renderClosure;renderClosure();
+
+const bases={independent:[[1,0],[0,1]],dependent:[[1,1],[2,2]],single:[[1,1],[0,0]]};let targetPoint=[2,-1];
+function renderSpan(){const [v1,v2]=bases[$('basisPreset').value],a=+$('alpha').value,b=+$('beta').value,r=[a*v1[0]+b*v2[0],a*v1[1]+b*v2[1]];$('alphaRead').textContent=a.toFixed(1);$('betaRead').textContent=b.toFixed(1);$('spanFormula').textContent=`v = ${a.toFixed(1)}v₁ + ${b.toFixed(1)}v₂ = [${r.map(x=>x.toFixed(1)).join(', ')}]`;
+ const det=v1[0]*v2[1]-v1[1]*v2[0],single=$('basisPreset').value==='single',reachable=Math.abs(det)>.001||(Math.abs(v1[0]*targetPoint[1]-v1[1]*targetPoint[0])<.12);$('spanResult').className='callout '+(reachable?'good':'bad');$('spanResult').innerHTML=reachable?`El objetivo <b>[${targetPoint.map(x=>x.toFixed(1)).join(', ')}]</b> pertenece al span.`:`El objetivo no está sobre la dirección generada; no existe una combinación que lo alcance.`;$('spanCode').textContent=`v1 = np.array([${v1}])\nv2 = np.array([${v2}])\nv = ${a.toFixed(1)}*v1 + ${b.toFixed(1)}*v2\n# dimensión del span = ${Math.abs(det)>.001?2:1}`;
+ const sx=x=>280+x*55,sy=y=>220-y*55;let s='';for(let i=-5;i<=5;i++){s+=`<line class="grid" x1="${sx(i)}" y1="20" x2="${sx(i)}" y2="420"/><line class="grid" x1="20" y1="${sy(i)}" x2="540" y2="${sy(i)}"/>`}s+=`<line class="axis" x1="20" y1="220" x2="540" y2="220"/><line class="axis" x1="280" y1="20" x2="280" y2="420"/>`;
+ if(Math.abs(det)<.001)s+=`<line x1="${sx(-4*v1[0])}" y1="${sy(-4*v1[1])}" x2="${sx(4*v1[0])}" y2="${sy(4*v1[1])}" stroke="var(--blue)" stroke-width="8" opacity=".16"/>`;else s+=`<rect x="20" y="20" width="520" height="400" fill="var(--blue-soft)" opacity=".28"/>`;
+ const arrow=(v,color,label)=>`<line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(v[0])}" y2="${sy(v[1])}" stroke="${color}" stroke-width="3"/><circle cx="${sx(v[0])}" cy="${sy(v[1])}" r="6" fill="${color}"/><text x="${sx(v[0])+8}" y="${sy(v[1])-8}">${label}</text>`;s+=arrow(v1,'var(--green)','v₁')+(single?'':arrow(v2,'var(--orange)','v₂'))+arrow(r,'var(--purple)','αv₁+βv₂');s+=`<circle class="drag-target" id="targetDot" cx="${sx(targetPoint[0])}" cy="${sy(targetPoint[1])}" r="10" fill="var(--red)"/><text x="${sx(targetPoint[0])+12}" y="${sy(targetPoint[1])-10}">objetivo</text>`;$('spanPlot').innerHTML=s;
+}
+['basisPreset','alpha','beta'].forEach(id=>$(id).oninput=renderSpan);renderSpan();
+let spanDragging=false;
+$('spanPlot').addEventListener('pointerdown',e=>{if(e.target.id!=='targetDot')return;spanDragging=true;$('spanPlot').setPointerCapture(e.pointerId)});
+$('spanPlot').addEventListener('pointermove',e=>{if(!spanDragging)return;const rect=$('spanPlot').getBoundingClientRect(),x=(e.clientX-rect.left)*560/rect.width,y=(e.clientY-rect.top)*440/rect.height;targetPoint=[Math.max(-4.5,Math.min(4.5,(x-280)/55)),Math.max(-3.5,Math.min(3.5,(220-y)/55))];renderSpan()});
+$('spanPlot').addEventListener('pointerup',()=>spanDragging=false);
+$('spanPlot').addEventListener('pointercancel',()=>spanDragging=false);
+
+const correct=['b','a','c'];let answered=[false,false,false];document.querySelectorAll('.answer').forEach(b=>b.onclick=()=>{const box=b.closest('.challenge'),q=+box.dataset.q;if(answered[q])return;answered[q]=true;const ok=b.dataset.value===correct[q];box.classList.toggle('done',ok);box.querySelector('.feedback').textContent=ok?'Correcto.':q===0?'Revisa la idea de contexto y proximidad.':q===1?'Si un vector es múltiplo del otro, no añade dirección.':'Aquí solo animamos posiciones preparadas; no se ejecuta un entrenamiento real.';box.querySelector('.feedback').style.color=ok?'var(--green)':'var(--red)';box.querySelectorAll('button').forEach(x=>x.disabled=true);$('score').textContent=answered.reduce((s,x,i)=>s+(x&&box.ownerDocument.querySelector(`.challenge[data-q="${i}"] .feedback`).textContent==='Correcto.'),0)});$('resetChallenge').onclick=()=>{answered=[false,false,false];$('score').textContent=0;document.querySelectorAll('.challenge').forEach(x=>{x.classList.remove('done');x.querySelector('.feedback').textContent='';x.querySelectorAll('button').forEach(b=>b.disabled=false)})};
+
+initScene();
+</script>
+</body>
+</html>
