@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marginal &amp; Conditional PDFs: From Surface to Slice</title>
+<!--
+  Self-contained teaching widget for marginal and conditional probability
+  density functions. The model is a standardized bivariate normal distribution.
+  All CSS, JavaScript, equations, and graphics live in this file.
+-->
+<style>
+  :root{
+    --bg:#f4f7fb;
+    --panel:#ffffff;
+    --panel-soft:#f7f9fc;
+    --ink:#182235;
+    --muted:#657289;
+    --line:#d8e1ee;
+    --blue:#3568b8;
+    --blue-soft:#e5eefb;
+    --teal:#16877f;
+    --teal-soft:#ddf4f1;
+    --orange:#d66a2c;
+    --orange-soft:#fff0e7;
+    --purple:#7658b6;
+    --shadow:0 10px 30px rgba(33,57,91,.08);
+    --radius:16px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --math:"STIX Two Math","Cambria Math","Latin Modern Math","Times New Roman",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    color:var(--ink);
+    background:
+      radial-gradient(900px 440px at 6% -8%,#e7f4f3 0%,transparent 58%),
+      radial-gradient(850px 480px at 98% 0%,#e6edfb 0%,transparent 58%),
+      var(--bg);
+    font-family:var(--font);
+    line-height:1.5;
+  }
+  button,input{font:inherit}
+  math{font-family:var(--math)}
+  .wrap{max-width:1180px;margin:0 auto;padding:66px 20px 56px}
+  .hero{text-align:center;margin-bottom:22px}
+  .eyebrow{margin:0 0 6px;color:var(--teal);font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+  h1{margin:0;font-size:clamp(1.7rem,4vw,2.55rem);line-height:1.15;letter-spacing:-.035em}
+  .hero p{max-width:800px;margin:12px auto 0;color:var(--muted);font-size:.98rem}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .control-panel{padding:17px 19px;margin-bottom:18px}
+  .controls{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:18px;align-items:end}
+  .control-group{min-width:0}
+  .control-label{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:7px;font-size:.82rem;font-weight:750;color:var(--muted)}
+  output{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:800}
+  input[type="range"]{width:100%;accent-color:var(--teal);cursor:pointer}
+  .segmented{display:flex;gap:7px;flex-wrap:wrap}
+  .choice{
+    border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;
+    padding:8px 12px;cursor:pointer;font-weight:700;font-size:.84rem;
+    transition:border-color .15s ease,background .15s ease,color .15s ease;
+  }
+  .choice:hover{border-color:var(--teal);color:var(--teal)}
+  .choice[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+  .choice.preset{padding:6px 9px;font-size:.76rem;font-weight:650}
+  .preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+
+  .visual-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(310px,.85fr);gap:18px;align-items:start}
+  .joint-panel,.conditional-panel{padding:17px}
+  .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:8px}
+  .panel-head h2{font-size:1.04rem;margin:0}
+  .panel-head p{margin:3px 0 0;color:var(--muted);font-size:.79rem}
+  .density-key{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:.73rem;white-space:nowrap}
+  .density-ramp{width:62px;height:8px;border-radius:99px;background:linear-gradient(90deg,#f1f5fb,#87a9d9,#264f91)}
+  .canvas-wrap{position:relative;width:100%}
+  canvas{display:block;width:100%;touch-action:none}
+  #jointCanvas{aspect-ratio:1.08/1;cursor:crosshair}
+  #curveCanvas{aspect-ratio:1.35/1}
+  .drag-hint{text-align:center;color:var(--muted);font-size:.76rem;margin-top:4px}
+
+  .curve-legend{display:flex;gap:15px;flex-wrap:wrap;min-height:24px;margin:4px 0 2px;color:var(--muted);font-size:.76rem}
+  .legend-line{display:inline-flex;align-items:center;gap:6px}
+  .legend-line::before{content:"";width:23px;border-top:3px solid var(--teal)}
+  .legend-line.marginal::before{border-top:2px dashed #8793a5}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+  .stat{background:var(--panel-soft);border:1px solid var(--line);border-radius:12px;padding:11px 12px;min-width:0}
+  .stat-label{color:var(--muted);font-size:.72rem;font-weight:750;text-transform:uppercase;letter-spacing:.04em}
+  .stat-value{font-size:1.15rem;font-weight:820;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+  .stat-sub{font-size:.7rem;color:var(--muted);margin-top:1px}
+
+  .uncertainty{margin-top:12px;padding:12px 13px;background:var(--teal-soft);border-radius:12px}
+  .uncertainty-head{display:flex;justify-content:space-between;gap:10px;font-size:.78rem;font-weight:750}
+  .meter{height:9px;border-radius:99px;background:rgba(22,135,127,.14);margin:8px 0 5px;overflow:hidden}
+  .meter-fill{height:100%;background:var(--teal);border-radius:inherit;transition:width .18s ease}
+  .uncertainty p{margin:0;color:#3f6663;font-size:.75rem}
+
+  .equation-panel{margin-top:18px;padding:18px 20px}
+  .equation-panel h2{margin:0 0 12px;font-size:1.08rem}
+  .equation-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .formula-option{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel-soft);transition:border-color .15s ease,background .15s ease}
+  .formula-option.active{border-color:#8bb7b3;background:#eef9f8}
+  .formula-title{color:var(--muted);font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+  .formula{font-size:clamp(1rem,2.2vw,1.25rem);overflow-x:auto;white-space:nowrap;padding:2px 0}
+  .formula-note{font-size:.77rem;color:var(--muted);margin:7px 0 0}
+
+  .concept-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+  .concept{position:relative;padding:16px 17px 15px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .concept-num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--blue-soft);color:var(--blue);font-weight:850;font-size:.8rem;margin-bottom:8px}
+  .concept h3{margin:0 0 5px;font-size:.95rem}
+  .concept p{margin:0;color:var(--muted);font-size:.82rem}
+  .concept math{font-size:1.04em;color:var(--ink)}
+  .insight{margin-top:18px;padding:14px 17px;border-left:4px solid var(--orange);background:var(--orange-soft);border-radius:0 12px 12px 0;font-size:.87rem}
+  .insight strong{color:#a94b19}
+  footer{text-align:center;color:var(--muted);font-size:.77rem;margin-top:30px}
+
+  @media(max-width:900px){
+    .controls{grid-template-columns:1fr 1fr}
+    .control-group.direction{grid-column:1/-1}
+    .visual-grid{grid-template-columns:1fr}
+    .conditional-panel{max-width:640px;width:100%;justify-self:center}
+  }
+  @media(max-width:650px){
+    .wrap{padding:78px 12px 40px}
+    .controls,.equation-grid,.concept-flow{grid-template-columns:1fr}
+    .control-group.direction{grid-column:auto}
+    .stats{grid-template-columns:1fr 1fr}
+    .joint-panel,.conditional-panel,.equation-panel{padding:13px}
+    .panel-head{display:block}
+    .density-key{margin-top:6px}
+  }
+</style>
+</head>
+<body>
+
+<div class="corner-controls">
+  <a href="index.html" class="back-to-index">&larr; Back to index</a>
+  <div class="verify-badge" data-verified="false" data-author="henrycarvajal9"></div>
+</div>
+<style>
+.corner-controls{position:fixed;top:10px;right:10px;z-index:9999;display:flex;align-items:center;gap:8px;}
+.back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.15);transition:border-color .15s ease,color .15s ease;}
+.back-to-index:hover{border-color:#4f7df3;color:#4f7df3;}
+.verify-badge{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:6px 12px;border-radius:999px;display:flex;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap;}
+.verify-badge[data-verified="true"]{background:#e6f9f1;color:#1a7a4a;border:1px solid #9ad9bb;}
+.verify-badge[data-verified="true"]::before{content:"\2713 Expert-verified";}
+.verify-badge[data-verified="false"]{background:#fdf3e7;color:#9a5b00;border:1px solid #f0c088;}
+.verify-badge[data-verified="false"]::before{content:"\26A0 AI-generated \00B7 not expert-verified";}
+.verify-badge[data-author]::after{content:"· by @" attr(data-author);opacity:.75;margin-left:4px;}
+@media(max-width:650px){.corner-controls{left:8px;right:auto;top:8px;gap:5px;flex-direction:column;align-items:flex-start}.back-to-index,.verify-badge{font-size:10px;padding:6px 8px}}
+</style>
+
+<main class="wrap">
+  <header class="hero">
+    <p class="eyebrow">Interactive probability lab</p>
+    <h1>Marginal &amp; Conditional PDFs</h1>
+    <p>Start with a joint density, collect all possible values to obtain a marginal, or reveal one variable and turn a single slice into a new probability density. Drag the slice and watch information reshape uncertainty.</p>
+  </header>
+
+  <section class="panel control-panel" aria-label="Distribution controls">
+    <div class="controls">
+      <div class="control-group direction">
+        <div class="control-label"><span>Conditioning direction</span></div>
+        <div class="segmented" role="group" aria-label="Conditioning direction">
+          <button type="button" class="choice direction-btn" data-direction="ygivenx" aria-pressed="true">Predict Y, know X</button>
+          <button type="button" class="choice direction-btn" data-direction="xgiveny" aria-pressed="false">Predict X, know Y</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="rhoSlider">
+          <span>Correlation <math><mi>ρ</mi></math></span>
+          <output id="rhoValue" for="rhoSlider">0.65</output>
+        </label>
+        <input id="rhoSlider" type="range" min="-0.9" max="0.9" step="0.05" value="0.65">
+        <div class="preset-row" aria-label="Correlation presets">
+          <button type="button" class="choice preset" data-rho="-0.75">Negative</button>
+          <button type="button" class="choice preset" data-rho="0">Independent</button>
+          <button type="button" class="choice preset" data-rho="0.75">Positive</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="evidenceSlider">
+          <span id="evidenceLabel">Known value of X</span>
+          <output id="evidenceValue" for="evidenceSlider">1.20</output>
+        </label>
+        <input id="evidenceSlider" type="range" min="-2.5" max="2.5" step="0.05" value="1.2">
+      </div>
+    </div>
+  </section>
+
+  <div class="visual-grid">
+    <section class="panel joint-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Joint density and its two marginals</h2>
+          <p>The center is the joint PDF; the projections collect density along an entire axis.</p>
+        </div>
+        <div class="density-key" aria-hidden="true"><span>low</span><span class="density-ramp"></span><span>high</span></div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="jointCanvas" role="img" aria-label="Joint density heatmap with marginal densities and a movable conditioning slice"></canvas>
+      </div>
+      <div class="drag-hint">Drag across the joint density to move the known-value slice.</div>
+    </section>
+
+    <section class="panel conditional-panel">
+      <div class="panel-head">
+        <div>
+          <h2 id="curveTitle">From slice to conditional PDF</h2>
+          <p id="curveSubtitle">Normalize the selected vertical slice so its area becomes one.</p>
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="curveCanvas" role="img" aria-label="Selected density slice and normalized conditional density"></canvas>
+      </div>
+      <div class="curve-legend" id="curveLegend" aria-hidden="true">
+        <span class="legend-line" id="primaryLegend">Conditional PDF</span>
+        <span class="legend-line marginal" id="marginalLegend">Target marginal</span>
+      </div>
+      <div class="uncertainty">
+        <div class="uncertainty-head">
+          <span>Conditional variance remaining</span>
+          <span id="variancePercent">58%</span>
+        </div>
+        <div class="meter" role="progressbar" aria-label="Conditional variance remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow="58">
+          <div class="meter-fill" id="varianceFill" style="width:58%"></div>
+        </div>
+        <p id="uncertaintyNote">Correlation makes the conditional distribution narrower than the marginal.</p>
+      </div>
+    </section>
+  </div>
+
+  <section class="stats" aria-live="polite" aria-label="Current distribution values">
+    <div class="stat">
+      <div class="stat-label" id="knownStatLabel">Known X</div>
+      <div class="stat-value" id="knownStat">1.20</div>
+      <div class="stat-sub">selected evidence</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Conditional mean</div>
+      <div class="stat-value" id="meanStat">0.78</div>
+      <div class="stat-sub" id="meanStatSub">of Y given X</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Conditional SD</div>
+      <div class="stat-value" id="sdStat">0.76</div>
+      <div class="stat-sub">smaller when dependence is strong</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label" id="areaStatLabel">Conditional area</div>
+      <div class="stat-value" id="areaStat">1.000</div>
+      <div class="stat-sub" id="areaStatSub">valid PDF after normalization</div>
+    </div>
+  </section>
+
+  <section class="panel equation-panel">
+    <h2>The slide equations, made visible</h2>
+    <div class="equation-grid">
+      <article class="formula-option active" data-formula="ygivenx">
+        <div class="formula-title">Conditional PDF of Y given X</div>
+        <div class="formula">
+          <math display="block">
+            <mrow>
+              <msub><mi>f</mi><mrow><mi>Y</mi><mo>|</mo><mi>X</mi></mrow></msub>
+              <mo stretchy="false">(</mo><mi>y</mi><mo>|</mo><mi>x</mi><mo stretchy="false">)</mo>
+              <mo>=</mo>
+              <mfrac>
+                <mrow><msub><mi>f</mi><mrow><mi>X</mi><mo>,</mo><mi>Y</mi></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false">)</mo></mrow>
+                <mrow><msub><mi>f</mi><mi>X</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow>
+              </mfrac>
+              <mo>,</mo>
+              <mspace width=".5em"></mspace>
+              <msub><mi>f</mi><mi>X</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>&gt;</mo><mn>0</mn>
+            </mrow>
+          </math>
+        </div>
+        <p class="formula-note">A vertical joint-density slice divided by its area becomes a density over Y.</p>
+      </article>
+      <article class="formula-option" data-formula="xgiveny">
+        <div class="formula-title">Conditional PDF of X given Y</div>
+        <div class="formula">
+          <math display="block">
+            <mrow>
+              <msub><mi>f</mi><mrow><mi>X</mi><mo>|</mo><mi>Y</mi></mrow></msub>
+              <mo stretchy="false">(</mo><mi>x</mi><mo>|</mo><mi>y</mi><mo stretchy="false">)</mo>
+              <mo>=</mo>
+              <mfrac>
+                <mrow><msub><mi>f</mi><mrow><mi>X</mi><mo>,</mo><mi>Y</mi></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false">)</mo></mrow>
+                <mrow><msub><mi>f</mi><mi>Y</mi></msub><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow>
+              </mfrac>
+              <mo>,</mo>
+              <mspace width=".5em"></mspace>
+              <msub><mi>f</mi><mi>Y</mi></msub><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mo>&gt;</mo><mn>0</mn>
+            </mrow>
+          </math>
+        </div>
+        <p class="formula-note">A horizontal joint-density slice divided by its area becomes a density over X.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="concept-flow" aria-label="Three conceptual steps">
+    <article class="concept">
+      <span class="concept-num">1</span>
+      <h3>Marginalize: collect</h3>
+      <p>
+        Add every possible value of the other variable:
+        <math><msub><mi>f</mi><mi>X</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><msubsup><mo>∫</mo><mrow><mo>−</mo><mi>∞</mi></mrow><mi>∞</mi></msubsup><msub><mi>f</mi><mrow><mi>X</mi><mo>,</mo><mi>Y</mi></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false">)</mo><mi>d</mi><mi>y</mi></math>.
+      </p>
+    </article>
+    <article class="concept">
+      <span class="concept-num">2</span>
+      <h3>Condition: restrict</h3>
+      <p>Knowing one exact value restricts the joint distribution to a vertical or horizontal slice of the plane.</p>
+    </article>
+    <article class="concept">
+      <span class="concept-num">3</span>
+      <h3>Normalize: rescale</h3>
+      <p>Divide the slice by the corresponding marginal density. The resulting conditional PDF has total area one.</p>
+    </article>
+  </section>
+
+  <aside class="insight" id="insight" aria-live="polite">
+    <strong>Information changes the prediction.</strong> Positive correlation and a positive observed value shift the conditional mean upward while reducing its spread.
+  </aside>
+
+  <footer>Standardized bivariate normal model · all displayed densities are computed in your browser</footer>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const state = {
+    rho: 0.65,
+    evidence: 1.2,
+    direction: 'ygivenx'
+  };
+
+  const domainMin = -3.5;
+  const domainMax = 3.5;
+  const evidenceMin = -2.5;
+  const evidenceMax = 2.5;
+  const jointCanvas = document.getElementById('jointCanvas');
+  const curveCanvas = document.getElementById('curveCanvas');
+  const rhoSlider = document.getElementById('rhoSlider');
+  const evidenceSlider = document.getElementById('evidenceSlider');
+
+  function phi(z) {
+    return Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+  }
+
+  function normalPdf(z, mean, sd) {
+    const q = (z - mean) / sd;
+    return Math.exp(-0.5 * q * q) / (sd * Math.sqrt(2 * Math.PI));
+  }
+
+  function jointPdf(x, y) {
+    const oneMinus = 1 - state.rho * state.rho;
+    const exponent = -(x * x - 2 * state.rho * x * y + y * y) / (2 * oneMinus);
+    return Math.exp(exponent) / (2 * Math.PI * Math.sqrt(oneMinus));
+  }
+
+  function conditionValues() {
+    return {
+      known: state.direction === 'ygivenx' ? 'X' : 'Y',
+      target: state.direction === 'ygivenx' ? 'Y' : 'X',
+      mean: state.rho * state.evidence,
+      sd: Math.sqrt(1 - state.rho * state.rho),
+      sliceArea: phi(state.evidence)
+    };
+  }
+
+  function setupCanvas(canvas) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(280, rect.width);
+    const height = Math.max(220, rect.height);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return {ctx, width, height};
+  }
+
+  function mixColor(t) {
+    const u = Math.pow(Math.max(0, Math.min(1, t)), 0.52);
+    const low = [245, 248, 253];
+    const high = [39, 79, 145];
+    return `rgb(${Math.round(low[0] + (high[0] - low[0]) * u)},${Math.round(low[1] + (high[1] - low[1]) * u)},${Math.round(low[2] + (high[2] - low[2]) * u)})`;
+  }
+
+  function drawJoint() {
+    const {ctx, width, height} = setupCanvas(jointCanvas);
+    ctx.clearRect(0, 0, width, height);
+
+    const left = width < 430 ? 42 : 55;
+    const top = width < 430 ? 78 : 92;
+    const rightSpace = width < 430 ? 72 : 98;
+    const bottom = 43;
+    const size = Math.min(width - left - rightSpace, height - top - bottom);
+    const x0 = left;
+    const y0 = top;
+    const x1 = left + size;
+    const y1 = top + size;
+    const span = domainMax - domainMin;
+    const xPx = x => x0 + (x - domainMin) / span * size;
+    const yPx = y => y1 - (y - domainMin) / span * size;
+    const xVal = px => domainMin + (px - x0) / size * span;
+    const yVal = py => domainMin + (y1 - py) / size * span;
+    jointCanvas._plot = {x0, y0, x1, y1, xVal, yVal};
+
+    ctx.fillStyle = '#f7f9fc';
+    ctx.fillRect(0, 0, width, height);
+
+    const cells = width < 430 ? 54 : 72;
+    const cell = size / cells;
+    const peak = jointPdf(0, 0);
+    for (let row = 0; row < cells; row++) {
+      const y = domainMax - (row + 0.5) / cells * span;
+      for (let col = 0; col < cells; col++) {
+        const x = domainMin + (col + 0.5) / cells * span;
+        ctx.fillStyle = mixColor(jointPdf(x, y) / peak);
+        ctx.fillRect(x0 + col * cell, y0 + row * cell, cell + .7, cell + .7);
+      }
+    }
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.68)';
+    ctx.lineWidth = 1.25;
+    [1, 2, 3].forEach(k => {
+      ctx.beginPath();
+      for (let i = 0; i <= 160; i++) {
+        const a = i / 160 * Math.PI * 2;
+        const x = k * Math.cos(a);
+        const y = k * (state.rho * Math.cos(a) + Math.sqrt(1 - state.rho * state.rho) * Math.sin(a));
+        const px = xPx(x);
+        const py = yPx(y);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    ctx.strokeStyle = '#c6d0de';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0 + .5, y0 + .5, size - 1, size - 1);
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#66748a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    [-3, -2, -1, 0, 1, 2, 3].forEach(v => {
+      const px = xPx(v);
+      ctx.beginPath();
+      ctx.moveTo(px, y1);
+      ctx.lineTo(px, y1 + 5);
+      ctx.stroke();
+      ctx.fillText(String(v), px, y1 + 8);
+    });
+    ctx.fillStyle = '#182235';
+    ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText('X', x0 + size / 2, y1 + 29);
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#66748a';
+    [-3, -2, -1, 0, 1, 2, 3].forEach(v => {
+      const py = yPx(v);
+      ctx.beginPath();
+      ctx.moveTo(x0 - 5, py);
+      ctx.lineTo(x0, py);
+      ctx.stroke();
+      ctx.fillText(String(v), x0 - 8, py);
+    });
+    ctx.save();
+    ctx.translate(13, y0 + size / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#182235';
+    ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText('Y', 0, 0);
+    ctx.restore();
+
+    const marginalBaseY = y0 - 11;
+    const marginalTopY = 18;
+    const marginalHeight = marginalBaseY - marginalTopY;
+    ctx.beginPath();
+    ctx.moveTo(x0, marginalBaseY);
+    for (let i = 0; i <= 140; i++) {
+      const z = domainMin + i / 140 * span;
+      const px = xPx(z);
+      const py = marginalBaseY - phi(z) / phi(0) * marginalHeight;
+      ctx.lineTo(px, py);
+    }
+    ctx.lineTo(x1, marginalBaseY);
+    ctx.closePath();
+    ctx.fillStyle = '#ddf4f1';
+    ctx.fill();
+    ctx.beginPath();
+    for (let i = 0; i <= 140; i++) {
+      const z = domainMin + i / 140 * span;
+      const px = xPx(z);
+      const py = marginalBaseY - phi(z) / phi(0) * marginalHeight;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = '#16877f';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#3f6663';
+    ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Marginal of X · area 1', x0 + 5, 7);
+
+    const marginalBaseX = x1 + 12;
+    const marginalRightX = width - 13;
+    const marginalWidth = marginalRightX - marginalBaseX;
+    ctx.beginPath();
+    ctx.moveTo(marginalBaseX, y1);
+    for (let i = 0; i <= 140; i++) {
+      const z = domainMin + i / 140 * span;
+      const py = yPx(z);
+      const px = marginalBaseX + phi(z) / phi(0) * marginalWidth;
+      ctx.lineTo(px, py);
+    }
+    ctx.lineTo(marginalBaseX, y0);
+    ctx.closePath();
+    ctx.fillStyle = '#e5eefb';
+    ctx.fill();
+    ctx.beginPath();
+    for (let i = 0; i <= 140; i++) {
+      const z = domainMin + i / 140 * span;
+      const py = yPx(z);
+      const px = marginalBaseX + phi(z) / phi(0) * marginalWidth;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = '#3568b8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(width - 8, y0 + size / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillStyle = '#365a8e';
+    ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Marginal of Y · area 1', 0, 0);
+    ctx.restore();
+
+    const cv = conditionValues();
+    ctx.save();
+    ctx.strokeStyle = '#d66a2c';
+    ctx.fillStyle = '#d66a2c';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([7, 5]);
+    if (state.direction === 'ygivenx') {
+      const px = xPx(state.evidence);
+      ctx.beginPath();
+      ctx.moveTo(px, y0);
+      ctx.lineTo(px, y1);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(px, yPx(cv.mean), 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      drawSliceLabel(ctx, `known X = ${state.evidence.toFixed(2)}`, px, y0, x0, x1, true);
+    } else {
+      const py = yPx(state.evidence);
+      ctx.beginPath();
+      ctx.moveTo(x0, py);
+      ctx.lineTo(x1, py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(xPx(cv.mean), py, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      drawSliceLabel(ctx, `known Y = ${state.evidence.toFixed(2)}`, x0, py, x0, x1, false);
+    }
+    ctx.restore();
+
+    jointCanvas.setAttribute('aria-label', `Standard bivariate normal joint density with correlation ${state.rho.toFixed(2)}. ${cv.known} equals ${state.evidence.toFixed(2)}. The conditional mean of ${cv.target} is ${cv.mean.toFixed(2)}.`);
+  }
+
+  function drawSliceLabel(ctx, text, px, py, x0, x1, vertical) {
+    ctx.setLineDash([]);
+    ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    const pad = 7;
+    const width = ctx.measureText(text).width + pad * 2;
+    const height = 23;
+    let bx;
+    let by;
+    if (vertical) {
+      bx = Math.max(x0 + 3, Math.min(x1 - width - 3, px - width / 2));
+      by = py + 7;
+    } else {
+      bx = x1 - width - 7;
+      by = py < 35 ? py + 7 : py - height - 7;
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.94)';
+    ctx.fillRect(bx, by, width, height);
+    ctx.strokeStyle = '#d66a2c';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + .5, by + .5, width - 1, height - 1);
+    ctx.fillStyle = '#a94b19';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, bx + width / 2, by + height / 2);
+  }
+
+  function drawCurve() {
+    const {ctx, width, height} = setupCanvas(curveCanvas);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    const left = 46;
+    const right = 15;
+    const top = 18;
+    const bottom = 43;
+    const plotW = width - left - right;
+    const plotH = height - top - bottom;
+    const cv = conditionValues();
+    const span = domainMax - domainMin;
+    const xPx = z => left + (z - domainMin) / span * plotW;
+    const selectedPdf = z => normalPdf(z, cv.mean, cv.sd);
+    let yMax = 0;
+    for (let i = 0; i <= 240; i++) {
+      const z = domainMin + i / 240 * span;
+      yMax = Math.max(yMax, selectedPdf(z));
+      yMax = Math.max(yMax, phi(z));
+    }
+    yMax *= 1.16;
+    const yPx = d => top + plotH - d / yMax * plotH;
+
+    ctx.strokeStyle = '#e1e7f0';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 3; i++) {
+      const py = top + plotH * i / 3;
+      ctx.beginPath();
+      ctx.moveTo(left, py);
+      ctx.lineTo(left + plotW, py);
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    for (let i = 0; i <= 240; i++) {
+      const z = domainMin + i / 240 * span;
+      const px = xPx(z);
+      const py = yPx(phi(z));
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = '#8793a5';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.moveTo(xPx(domainMin), yPx(0));
+    for (let i = 0; i <= 240; i++) {
+      const z = domainMin + i / 240 * span;
+      ctx.lineTo(xPx(z), yPx(selectedPdf(z)));
+    }
+    ctx.lineTo(xPx(domainMax), yPx(0));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(22,135,127,.17)';
+    ctx.fill();
+
+    ctx.beginPath();
+    for (let i = 0; i <= 240; i++) {
+      const z = domainMin + i / 240 * span;
+      const px = xPx(z);
+      const py = yPx(selectedPdf(z));
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = '#16877f';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#aeb9c9';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(left, top);
+    ctx.lineTo(left, top + plotH);
+    ctx.lineTo(left + plotW, top + plotH);
+    ctx.stroke();
+
+    ctx.fillStyle = '#66748a';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    [-3, -1.5, 0, 1.5, 3].forEach(v => {
+      const px = xPx(v);
+      ctx.fillText(Number.isInteger(v) ? String(v) : v.toFixed(1), px, top + plotH + 7);
+    });
+    ctx.fillStyle = '#182235';
+    ctx.font = '700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(cv.target, left + plotW / 2, height - 15);
+
+    ctx.save();
+    ctx.translate(12, top + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText('density', 0, 0);
+    ctx.restore();
+
+    const meanX = xPx(cv.mean);
+    ctx.strokeStyle = '#16877f';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(meanX, yPx(0));
+    ctx.lineTo(meanX, yPx(selectedPdf(cv.mean)));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#182235';
+    ctx.font = '700 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = meanX > width - 95 ? 'right' : 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`mean ${cv.mean.toFixed(2)}`, meanX + (meanX > width - 95 ? -5 : 5), yPx(selectedPdf(cv.mean)) - 4);
+
+    curveCanvas.setAttribute('aria-label', `Normalized conditional density for ${cv.target} given ${cv.known} equals ${state.evidence.toFixed(2)}. Area 1.000.`);
+  }
+
+  function updateText() {
+    const cv = conditionValues();
+    const variance = 1 - state.rho * state.rho;
+    const percent = Math.round(variance * 100);
+    document.getElementById('rhoValue').textContent = state.rho.toFixed(2);
+    document.getElementById('evidenceValue').textContent = state.evidence.toFixed(2);
+    document.getElementById('evidenceLabel').textContent = `Known value of ${cv.known}`;
+    document.getElementById('knownStatLabel').textContent = `Known ${cv.known}`;
+    document.getElementById('knownStat').textContent = state.evidence.toFixed(2);
+    document.getElementById('meanStat').textContent = cv.mean.toFixed(2);
+    document.getElementById('meanStatSub').textContent = `of ${cv.target} given ${cv.known}`;
+    document.getElementById('sdStat').textContent = cv.sd.toFixed(2);
+    document.getElementById('areaStatLabel').textContent = 'Conditional area';
+    document.getElementById('areaStat').textContent = '1.000';
+    document.getElementById('areaStatSub').textContent = 'valid PDF after normalization';
+    document.getElementById('curveSubtitle').textContent = state.direction === 'ygivenx'
+      ? 'Normalize the selected vertical slice so its area becomes one.'
+      : 'Normalize the selected horizontal slice so its area becomes one.';
+    document.getElementById('primaryLegend').textContent = `Conditional PDF of ${cv.target}`;
+    document.getElementById('marginalLegend').textContent = `Marginal PDF of ${cv.target}`;
+    document.getElementById('variancePercent').textContent = `${percent}%`;
+    document.getElementById('varianceFill').style.width = `${percent}%`;
+    const meter = document.querySelector('.meter');
+    meter.setAttribute('aria-valuenow', String(percent));
+
+    document.querySelectorAll('.direction-btn').forEach(btn => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.direction === state.direction));
+    });
+    document.querySelectorAll('.formula-option').forEach(el => {
+      el.classList.toggle('active', el.dataset.formula === state.direction);
+    });
+
+    let uncertaintyText;
+    if (Math.abs(state.rho) < .025) {
+      uncertaintyText = 'At zero correlation in this normal model, conditioning leaves the marginal unchanged.';
+    } else if (Math.abs(state.rho) >= .7) {
+      uncertaintyText = 'Strong dependence removes much of the target variable’s uncertainty.';
+    } else {
+      uncertaintyText = 'Correlation makes the conditional distribution narrower than the marginal.';
+    }
+    document.getElementById('uncertaintyNote').textContent = uncertaintyText;
+
+    let insight;
+    if (Math.abs(state.rho) < .025) {
+      insight = '<strong>Independence checkpoint.</strong> The conditional and marginal curves overlap: knowing the other variable does not change the prediction in this bivariate normal model.';
+    } else {
+      const directionWord = cv.mean > 0.02 ? 'upward' : cv.mean < -0.02 ? 'downward' : 'toward the center';
+      const signWord = state.rho > 0 ? 'Positive' : 'Negative';
+      insight = `<strong>Information changes the prediction.</strong> ${signWord} correlation and the selected evidence shift the conditional mean ${directionWord}; the conditional spread depends on correlation strength, not on the observed value.`;
+    }
+    document.getElementById('insight').innerHTML = insight;
+  }
+
+  function render() {
+    updateText();
+    drawJoint();
+    drawCurve();
+  }
+
+  rhoSlider.addEventListener('input', () => {
+    state.rho = Number(rhoSlider.value);
+    render();
+  });
+  evidenceSlider.addEventListener('input', () => {
+    state.evidence = Number(evidenceSlider.value);
+    render();
+  });
+  document.querySelectorAll('.direction-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.direction = btn.dataset.direction;
+      render();
+    });
+  });
+  document.querySelectorAll('.preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.rho = Number(btn.dataset.rho);
+      rhoSlider.value = String(state.rho);
+      render();
+    });
+  });
+
+  let dragging = false;
+  function updateEvidenceFromPointer(event) {
+    const plot = jointCanvas._plot;
+    if (!plot) return;
+    const rect = jointCanvas.getBoundingClientRect();
+    const px = (event.clientX - rect.left) * (jointCanvas.clientWidth / rect.width);
+    const py = (event.clientY - rect.top) * (jointCanvas.clientHeight / rect.height);
+    let value = state.direction === 'ygivenx' ? plot.xVal(px) : plot.yVal(py);
+    value = Math.max(evidenceMin, Math.min(evidenceMax, value));
+    value = Math.round(value * 20) / 20;
+    state.evidence = value;
+    evidenceSlider.value = String(value);
+    render();
+  }
+  jointCanvas.addEventListener('pointerdown', event => {
+    dragging = true;
+    jointCanvas.setPointerCapture(event.pointerId);
+    updateEvidenceFromPointer(event);
+  });
+  jointCanvas.addEventListener('pointermove', event => {
+    if (dragging) updateEvidenceFromPointer(event);
+  });
+  jointCanvas.addEventListener('pointerup', event => {
+    dragging = false;
+    if (jointCanvas.hasPointerCapture(event.pointerId)) jointCanvas.releasePointerCapture(event.pointerId);
+  });
+  jointCanvas.addEventListener('pointercancel', () => { dragging = false; });
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(render, 80);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
