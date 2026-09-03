@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convolution of PDFs: Watch the Overlap</title>
+<style>
+  :root{
+    --ink:#14243a;
+    --muted:#5b6b80;
+    --line:#d8e1ed;
+    --panel:#ffffff;
+    --soft:#f4f7fb;
+    --blue:#286fbe;
+    --blue-soft:#e9f3ff;
+    --orange:#d56a2f;
+    --orange-soft:#fff0e7;
+    --green:#19865f;
+    --green-soft:#e7f6ef;
+    --amber:#9a6500;
+    --amber-soft:#fff6dd;
+    --danger:#b83a3a;
+    --shadow:0 12px 34px rgba(27,51,84,.09);
+    --math:"STIX Two Math","Cambria Math","Latin Modern Math","Times New Roman",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    color:var(--ink);
+    background:linear-gradient(180deg,#f7faff 0,#fff 420px);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  button,input{font:inherit}
+  math{font-family:var(--math)}
+  .inline-math{display:inline-block;font-size:1em;vertical-align:-.12em}
+  .corner-controls{position:fixed;top:10px;right:10px;z-index:9999;display:flex;align-items:center;gap:8px}
+  .back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.15);transition:border-color .15s ease,color .15s ease}
+  .back-to-index:hover{border-color:#4f7df3;color:#4f7df3}
+  .verify-badge{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:6px 12px;border-radius:999px;display:flex;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap}
+  .verify-badge[data-author]::after{content:"· by @" attr(data-author);opacity:.75;margin-left:4px}
+  .verify-badge[data-verified="true"]{background:#e6f9f1;color:#1a7a4a;border:1px solid #9ad9bb}
+  .verify-badge[data-verified="true"]::before{content:"\2713 Expert-verified"}
+  .verify-badge[data-verified="false"]{background:#fdf3e7;color:#9a5b00;border:1px solid #f0c088}
+  .verify-badge[data-verified="false"]::before{content:"\26A0 AI-generated \00B7 not expert-verified"}
+  .page{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:72px 0 54px}
+  header{text-align:center;margin-bottom:24px}
+  .eyebrow{margin:0 0 8px;color:var(--blue);font-weight:800;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase}
+  h1{margin:0;font-size:clamp(2rem,5vw,3.6rem);letter-spacing:-.045em;line-height:1.05}
+  .lead{max-width:780px;margin:14px auto 0;color:var(--muted);font-size:clamp(1rem,2vw,1.16rem);line-height:1.55}
+  .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0 16px}
+  .function-card,.workspace,.result-panel,.derivation{
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)
+  }
+  .function-card{padding:18px 20px;position:relative;overflow:hidden}
+  .function-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--card-accent)}
+  .function-card.x-card{--card-accent:var(--orange)}
+  .function-card.y-card{--card-accent:var(--blue)}
+  .function-card h2,.section-heading h2,.result-panel h2,.derivation h2{margin:0;font-size:1.15rem}
+  .definition{min-height:58px;display:flex;align-items:center;margin:8px 0 12px;font-size:1.06rem;overflow-x:auto}
+  .control-label{display:flex;justify-content:space-between;align-items:baseline;gap:12px;color:var(--muted);font-size:.88rem;font-weight:700}
+  .control-value{color:var(--ink);font-variant-numeric:tabular-nums}
+  input[type="range"]{width:100%;accent-color:var(--card-accent);min-height:32px;cursor:pointer}
+  .workspace{padding:20px;margin-top:14px}
+  .section-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+  .section-heading p{margin:5px 0 0;color:var(--muted);font-size:.91rem;line-height:1.45}
+  .case-chip{flex:0 0 auto;border-radius:999px;padding:7px 12px;background:var(--blue-soft);color:var(--blue);font-size:.82rem;font-weight:800}
+  .sweep-controls{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:12px;align-items:end;padding:14px;background:var(--soft);border-radius:14px}
+  .z-control{min-width:0}
+  .z-control input{accent-color:var(--green)}
+  .button-row{display:flex;gap:8px;align-items:center}
+  button{min-height:42px;border:1px solid #b7c5d8;border-radius:10px;background:#fff;color:var(--ink);font-weight:750;padding:9px 14px;cursor:pointer}
+  button:hover{border-color:var(--blue);color:var(--blue)}
+  button:focus-visible,input:focus-visible{outline:3px solid rgba(40,111,190,.28);outline-offset:2px}
+  .play-button{background:var(--ink);border-color:var(--ink);color:#fff;min-width:126px}
+  .play-button:hover{background:#233b5b;border-color:#233b5b;color:#fff}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+  .metric{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;min-width:0}
+  .metric-label{display:block;color:var(--muted);font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+  .metric-value{display:block;margin-top:3px;font-family:var(--math);font-size:1.12rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .plot-shell{position:relative;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+  #convolutionPlot{display:block;width:100%;height:500px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 4px 0;color:var(--muted);font-size:.82rem}
+  .legend-item{display:flex;align-items:center;gap:6px}
+  .swatch{width:18px;height:4px;border-radius:3px;background:var(--swatch)}
+  .swatch.band{height:12px;border:1px solid rgba(25,134,95,.35);background:repeating-linear-gradient(135deg,rgba(25,134,95,.26) 0 4px,rgba(25,134,95,.07) 4px 8px)}
+  .live-equation{display:flex;align-items:center;justify-content:center;min-height:58px;margin-top:12px;padding:10px 14px;border-radius:12px;background:var(--green-soft);color:#145f47;font-size:1.02rem;overflow-x:auto}
+  .result-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(310px,.8fr);gap:14px;margin-top:14px}
+  .result-panel,.derivation{padding:20px}
+  #resultPlot{display:block;width:100%;height:340px;border:1px solid var(--line);border-radius:14px;background:#fff}
+  .result-note{margin:10px 0 0;color:var(--muted);font-size:.88rem;line-height:1.45}
+  .derivation-intro{margin:8px 0 12px;color:var(--muted);font-size:.9rem;line-height:1.45}
+  .piece-list{display:grid;gap:8px}
+  .piece{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--soft);transition:background .15s ease,border-color .15s ease;overflow-x:auto}
+  .piece.active{background:var(--green-soft);border-color:#7cc9aa}
+  .piece math{display:block}
+  .takeaway{margin-top:14px;padding:13px 15px;border-left:4px solid var(--green);background:var(--green-soft);line-height:1.5}
+  .takeaway strong{color:#116347}
+  .source-note{margin:16px auto 0;max-width:900px;text-align:center;color:var(--muted);font-size:.82rem;line-height:1.45}
+  .axis-label{font-family:var(--math);font-style:italic;fill:var(--muted)}
+  .svg-label{fill:var(--muted);font-size:12px}
+  .svg-value{fill:var(--ink);font-size:12px;font-weight:700}
+  .plot-title{fill:var(--ink);font-size:13px;font-weight:800}
+  @media (max-width:820px){
+    .page{width:min(100% - 20px,720px);padding-top:92px}
+    .setup-grid,.result-grid{grid-template-columns:1fr}
+    .sweep-controls{grid-template-columns:1fr}
+    .button-row{justify-content:stretch}
+    .button-row button{flex:1}
+    .metrics{grid-template-columns:1fr 1fr}
+    #convolutionPlot{height:570px}
+  }
+  @media (max-width:520px){
+    .corner-controls{left:8px;right:8px;justify-content:center;flex-wrap:wrap}
+    .workspace,.result-panel,.derivation{padding:14px}
+    .function-card{padding:16px}
+    .section-heading{display:block}
+    .case-chip{display:inline-block;margin-top:8px}
+    .metrics{grid-template-columns:1fr}
+    #convolutionPlot{height:610px}
+    #resultPlot{height:360px}
+  }
+  @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="corner-controls">
+  <a href="index.html" class="back-to-index">&larr; Back to index</a>
+  <div class="verify-badge" data-verified="false" data-author="henrycarvajal9"></div>
+</div>
+
+<main class="page">
+  <header>
+    <p class="eyebrow">Probability laboratory</p>
+    <h1>Convolution of PDFs</h1>
+    <p class="lead">If independent random variables are added, their densities combine by convolution. Move the shifted PDF across the other one and watch the overlap build the density of the sum.</p>
+  </header>
+
+  <section class="setup-grid" aria-label="Input probability density functions">
+    <article class="function-card x-card">
+      <h2>1. Exponential random variable</h2>
+      <div class="definition">
+        <math display="block" aria-label="f sub X of x equals lambda e to the minus lambda x for x greater than or equal to zero">
+          <mrow><msub><mi>f</mi><mi>X</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>λ</mi><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi><mi>x</mi></mrow></msup><mo>,</mo><mspace width=".5em"/><mi>x</mi><mo>≥</mo><mn>0</mn></mrow>
+        </math>
+      </div>
+      <label class="control-label" for="lambdaSlider"><span>Rate λ</span><output id="lambdaValue" class="control-value">1.00</output></label>
+      <input id="lambdaSlider" type="range" min="0.4" max="2" step="0.05" value="1" aria-label="Exponential rate lambda">
+    </article>
+
+    <article class="function-card y-card">
+      <h2>2. Uniform random variable</h2>
+      <div class="definition">
+        <math display="block" aria-label="f sub Y of y equals one over T for y between zero and T">
+          <mrow><msub><mi>f</mi><mi>Y</mi></msub><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mn>1</mn><mi>T</mi></mfrac><mo>,</mo><mspace width=".5em"/><mn>0</mn><mo>≤</mo><mi>y</mi><mo>≤</mo><mi>T</mi></mrow>
+        </math>
+      </div>
+      <label class="control-label" for="tSlider"><span>Width T</span><output id="tValue" class="control-value">2.00</output></label>
+      <input id="tSlider" type="range" min="0.75" max="4" step="0.05" value="2" aria-label="Uniform interval width T">
+    </article>
+  </section>
+
+  <section class="workspace" aria-labelledby="workspaceTitle">
+    <div class="section-heading">
+      <div>
+        <h2 id="workspaceTitle">Slide, overlap, integrate</h2>
+        <p>The blue window is the flipped-and-shifted density <strong><math class="inline-math" aria-label="f sub Y of z minus w"><mrow><msub><mi>f</mi><mi>Y</mi></msub><mo stretchy="false">(</mo><mi>z</mi><mo>−</mo><mi>w</mi><mo stretchy="false">)</mo></mrow></math></strong>. Its support is always <strong><math class="inline-math" aria-label="the interval from z minus T to z"><mrow><mo>[</mo><mi>z</mi><mo>−</mo><mi>T</mi><mo>,</mo><mi>z</mi><mo>]</mo></mrow></math></strong>.</p>
+      </div>
+      <div id="caseChip" class="case-chip">Growing overlap</div>
+    </div>
+
+    <div class="sweep-controls">
+      <div class="z-control">
+        <label class="control-label" for="zSlider"><span>Position of the sum z</span><output id="zValue" class="control-value">1.00</output></label>
+        <input id="zSlider" type="range" min="-1.5" max="7" step="0.01" value="1" aria-label="Position z of the shifted uniform density">
+      </div>
+      <div class="button-row">
+        <button id="stepBack" type="button" aria-label="Move z one step backward">← Step</button>
+        <button id="stepForward" type="button" aria-label="Move z one step forward">Step →</button>
+      </div>
+      <button id="playButton" class="play-button" type="button">▶ Play sweep</button>
+    </div>
+
+    <div class="metrics" aria-live="polite">
+      <div class="metric"><span class="metric-label">Moving support</span><span id="windowMetric" class="metric-value">[−1.00, 1.00]</span></div>
+      <div class="metric"><span class="metric-label">Integration limits</span><span id="limitsMetric" class="metric-value">[0.00, 1.00]</span></div>
+      <div class="metric"><span class="metric-label">Current density <math class="inline-math" aria-label="f sub Z of z"><mrow><msub><mi>f</mi><mi>Z</mi></msub><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></mrow></math></span><span id="densityMetric" class="metric-value">0.3161</span></div>
+    </div>
+
+    <div class="plot-shell">
+      <svg id="convolutionPlot" role="img" aria-labelledby="convPlotTitle convPlotDesc">
+        <title id="convPlotTitle">Moving convolution overlap</title>
+        <desc id="convPlotDesc">An exponential density and a shifted uniform density are plotted over w. Their product is shown below over the active integration interval.</desc>
+      </svg>
+    </div>
+    <div class="legend" aria-label="Plot legend">
+      <span class="legend-item"><span class="swatch" style="--swatch:var(--orange)"></span>Exponential <math class="inline-math" aria-label="f sub X of w"><mrow><msub><mi>f</mi><mi>X</mi></msub><mo stretchy="false">(</mo><mi>w</mi><mo stretchy="false">)</mo></mrow></math></span>
+      <span class="legend-item"><span class="swatch" style="--swatch:var(--blue)"></span>Shifted uniform <math class="inline-math" aria-label="f sub Y of z minus w"><mrow><msub><mi>f</mi><mi>Y</mi></msub><mo stretchy="false">(</mo><mi>z</mi><mo>−</mo><mi>w</mi><mo stretchy="false">)</mo></mrow></math></span>
+      <span class="legend-item"><span class="swatch band"></span>Active overlap interval</span>
+      <span class="legend-item"><span class="swatch" style="--swatch:var(--green)"></span>Product integrated below</span>
+    </div>
+
+    <div id="liveEquation" class="live-equation" aria-live="polite"></div>
+  </section>
+
+  <section class="result-grid" aria-label="Convolution result and piecewise formula">
+    <article class="result-panel">
+      <div class="section-heading">
+        <div>
+          <h2>The overlap traces the density of the sum</h2>
+          <p>Each value of z produces one integral value and therefore one point on the output density.</p>
+        </div>
+      </div>
+      <svg id="resultPlot" role="img" aria-labelledby="resultPlotTitle resultPlotDesc">
+        <title id="resultPlotTitle">Probability density of Z equals X plus Y</title>
+        <desc id="resultPlotDesc">The piecewise convolution density is zero for negative z, rises on zero to T, and decays after T. A marker shows the current z.</desc>
+      </svg>
+      <p class="result-note">The curve rises while the moving window gains overlap with the exponential support. After z passes T, the overlap width stays equal to T but slides into the exponential tail.</p>
+    </article>
+
+    <aside class="derivation">
+      <h2>Piecewise result</h2>
+      <p class="derivation-intro">The integration interval is the intersection of <strong><math class="inline-math" aria-label="w greater than or equal to zero"><mrow><mi>w</mi><mo>≥</mo><mn>0</mn></mrow></math></strong> and <strong><math class="inline-math" aria-label="z minus T less than or equal to w less than or equal to z"><mrow><mi>z</mi><mo>−</mo><mi>T</mi><mo>≤</mo><mi>w</mi><mo>≤</mo><mi>z</mi></mrow></math></strong>.</p>
+      <div class="piece-list">
+        <div id="pieceNegative" class="piece">
+          <math display="block" aria-label="f sub Z of z equals zero for z less than zero">
+            <mrow><msub><mi>f</mi><mi>Z</mi></msub><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn><mo>,</mo><mspace width=".45em"/><mi>z</mi><mo>&lt;</mo><mn>0</mn></mrow>
+          </math>
+        </div>
+        <div id="pieceMiddle" class="piece active">
+          <math display="block" aria-label="f sub Z of z equals one minus e to the minus lambda z over T for zero less than or equal to z less than or equal to T">
+            <mrow><msub><mi>f</mi><mi>Z</mi></msub><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mn>1</mn><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi><mi>z</mi></mrow></msup></mrow><mi>T</mi></mfrac><mo>,</mo><mspace width=".45em"/><mn>0</mn><mo>≤</mo><mi>z</mi><mo>≤</mo><mi>T</mi></mrow>
+          </math>
+        </div>
+        <div id="pieceTail" class="piece">
+          <math display="block" aria-label="f sub Z of z equals e to the minus lambda times z minus T minus e to the minus lambda z over T for z greater than T">
+            <mrow><msub><mi>f</mi><mi>Z</mi></msub><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi><mo stretchy="false">(</mo><mi>z</mi><mo>−</mo><mi>T</mi><mo stretchy="false">)</mo></mrow></msup><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi><mi>z</mi></mrow></msup></mrow><mi>T</mi></mfrac><mo>,</mo><mspace width=".45em"/><mi>z</mi><mo>&gt;</mo><mi>T</mi></mrow>
+          </math>
+        </div>
+      </div>
+      <div class="takeaway"><strong>Key idea.</strong> Convolution turns the moving overlap into the probability density of a sum of independent random variables.</div>
+    </aside>
+  </section>
+
+  <p class="source-note">Model used in the class exercise: <math class="inline-math" aria-label="X"><mi>X</mi></math> is exponential with rate <math class="inline-math" aria-label="lambda"><mi>λ</mi></math>, <math class="inline-math" aria-label="Y"><mi>Y</mi></math> is uniform on <math class="inline-math" aria-label="the interval from zero to T"><mrow><mo>[</mo><mn>0</mn><mo>,</mo><mi>T</mi><mo>]</mo></mrow></math>, the variables are independent, and <math class="inline-math" aria-label="Z equals X plus Y"><mrow><mi>Z</mi><mo>=</mo><mi>X</mi><mo>+</mo><mi>Y</mi></mrow></math>.</p>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const lambdaSlider = document.getElementById('lambdaSlider');
+  const tSlider = document.getElementById('tSlider');
+  const zSlider = document.getElementById('zSlider');
+  const playButton = document.getElementById('playButton');
+  const stepBack = document.getElementById('stepBack');
+  const stepForward = document.getElementById('stepForward');
+  const convolutionPlot = document.getElementById('convolutionPlot');
+  const resultPlot = document.getElementById('resultPlot');
+
+  const state = { lambda: 1, T: 2, z: 1, playing: false, animationId: 0, lastTime: 0 };
+  const colors = { ink:'#14243a', muted:'#5b6b80', line:'#d8e1ed', soft:'#f4f7fb', blue:'#286fbe', orange:'#d56a2f', green:'#19865f', blueSoft:'#e9f3ff', greenSoft:'#e7f6ef' };
+
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const minus = value => String(value).replace('-', '−');
+  const fmt = (value, digits = 2) => minus(Math.abs(value) < 0.0005 ? (0).toFixed(digits) : value.toFixed(digits));
+  const esc = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const zMin = () => -0.75 * state.T;
+  const zMax = () => state.T + 5 / state.lambda;
+  const xPdf = w => w < 0 ? 0 : state.lambda * Math.exp(-state.lambda * w);
+  const zPdf = z => {
+    if (z < 0) return 0;
+    if (z <= state.T) return (1 - Math.exp(-state.lambda * z)) / state.T;
+    return (Math.exp(-state.lambda * (z - state.T)) - Math.exp(-state.lambda * z)) / state.T;
+  };
+  const lower = () => state.z < 0 ? NaN : Math.max(0, state.z - state.T);
+  const upper = () => state.z < 0 ? NaN : state.z;
+  const overlapWidth = () => state.z < 0 ? 0 : Math.max(0, upper() - lower());
+  const currentCase = () => state.z < 0 ? 'negative' : state.z <= state.T ? 'middle' : 'tail';
+
+  function setSvgSize(svg) {
+    const width = Math.max(300, Math.round(svg.getBoundingClientRect().width));
+    const height = Math.round(svg.getBoundingClientRect().height);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    return { width, height };
+  }
+
+  function linePath(points, xScale, yScale) {
+    return points.map((point, index) => `${index ? 'L' : 'M'}${xScale(point[0]).toFixed(2)},${yScale(point[1]).toFixed(2)}`).join(' ');
+  }
+
+  function tickValues(min, max, count) {
+    const span = max - min;
+    const raw = span / Math.max(1, count);
+    const power = Math.pow(10, Math.floor(Math.log10(raw)));
+    const unit = raw / power;
+    const nice = unit <= 1 ? 1 : unit <= 2 ? 2 : unit <= 5 ? 5 : 10;
+    const step = nice * power;
+    const values = [];
+    for (let value = Math.ceil(min / step) * step; value <= max + step * .1; value += step) values.push(value);
+    return values;
+  }
+
+  function axesMarkup(x0, x1, y0, y1, domainMin, domainMax, yMax, xLabel, yLabel, tickCount) {
+    const x = value => x0 + (value - domainMin) / (domainMax - domainMin) * (x1 - x0);
+    const y = value => y1 - value / yMax * (y1 - y0);
+    const ticks = tickValues(domainMin, domainMax, tickCount);
+    let markup = `<line x1="${x0}" y1="${y1}" x2="${x1}" y2="${y1}" stroke="${colors.ink}" stroke-width="1.2"/>`;
+    markup += `<line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y1}" stroke="${colors.ink}" stroke-width="1.2"/>`;
+    for (const value of ticks) {
+      const px = x(value);
+      markup += `<line x1="${px}" y1="${y0}" x2="${px}" y2="${y1}" stroke="${colors.line}" stroke-width="1"/>`;
+      markup += `<text x="${px}" y="${y1 + 19}" text-anchor="middle" class="svg-label">${esc(fmt(value, value % 1 ? 1 : 0))}</text>`;
+    }
+    markup += `<text x="${x1}" y="${y1 + 34}" text-anchor="end" class="axis-label">${esc(xLabel)}</text>`;
+    markup += `<text x="${x0 + 4}" y="${y0 - 8}" class="svg-label">${esc(yLabel)}</text>`;
+    return { markup, x, y };
+  }
+
+  function drawConvolution() {
+    const { width: W, height: H } = setSvgSize(convolutionPlot);
+    const mobile = W < 560;
+    const margin = { left: mobile ? 48 : 62, right: 22, top: 38, bottom: 34 };
+    const domainMin = Math.min(-state.T * 1.05, state.z - state.T - .35, -.4);
+    const domainMax = Math.max(state.T + 3.8 / state.lambda, state.z + .55, 2.5);
+    const plotWidth = W - margin.left - margin.right;
+    const topY0 = margin.top;
+    const topY1 = Math.round(H * .54);
+    const bottomY0 = Math.round(H * .67);
+    const bottomY1 = H - margin.bottom;
+    const yMaxTop = Math.max(state.lambda, 1 / state.T) * 1.22;
+    const yMaxProduct = state.lambda / state.T * 1.22;
+    const topAxes = axesMarkup(margin.left, margin.left + plotWidth, topY0, topY1, domainMin, domainMax, yMaxTop, 'w', 'density', mobile ? 4 : 7);
+    const productAxes = axesMarkup(margin.left, margin.left + plotWidth, bottomY0, bottomY1, domainMin, domainMax, yMaxProduct, 'w', 'product', mobile ? 4 : 7);
+    const x = topAxes.x;
+    const yTop = topAxes.y;
+    const yProduct = productAxes.y;
+    const samples = [];
+    const productSamples = [];
+    const N = Math.max(180, Math.round(plotWidth));
+    for (let i = 0; i <= N; i++) {
+      const w = Math.max(0, domainMin + (domainMax - domainMin) * i / N);
+      samples.push([w, xPdf(w)]);
+      if (state.z >= 0 && w >= lower() && w <= upper()) productSamples.push([w, xPdf(w) / state.T]);
+    }
+
+    const windowLeft = state.z - state.T;
+    const windowRight = state.z;
+    const rectLeft = clamp(x(windowLeft), margin.left, margin.left + plotWidth);
+    const rectRight = clamp(x(windowRight), margin.left, margin.left + plotWidth);
+    const uniformTop = yTop(1 / state.T);
+    let markup = `<title id="convPlotTitle">Moving convolution overlap</title><desc id="convPlotDesc">An exponential density and a shifted uniform density are plotted over w. Their product is shown below over the active integration interval.</desc><defs>
+      <pattern id="overlapHatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="9" height="9" fill="${colors.greenSoft}"/><line x1="0" y1="0" x2="0" y2="9" stroke="${colors.green}" stroke-opacity=".35" stroke-width="3"/></pattern>
+      <clipPath id="topClip"><rect x="${margin.left}" y="${topY0}" width="${plotWidth}" height="${topY1-topY0}"/></clipPath>
+      <clipPath id="productClip"><rect x="${margin.left}" y="${bottomY0}" width="${plotWidth}" height="${bottomY1-bottomY0}"/></clipPath>
+    </defs>`;
+    markup += `<text x="${margin.left}" y="20" class="plot-title">Factors: one fixed, one moving</text>`;
+    markup += topAxes.markup;
+    markup += `<g clip-path="url(#topClip)">`;
+    if (state.z >= 0 && upper() > lower()) {
+      const activeLeft = x(lower());
+      const activeRight = x(upper());
+      markup += `<rect x="${activeLeft}" y="${topY0}" width="${Math.max(0,activeRight-activeLeft)}" height="${topY1-topY0}" fill="url(#overlapHatch)"/>`;
+    }
+    markup += `<path d="${linePath(samples,x,yTop)}" fill="none" stroke="${colors.orange}" stroke-width="3"/>`;
+    if (rectRight > margin.left && rectLeft < margin.left + plotWidth) {
+      markup += `<path d="M${rectLeft},${topY1} L${rectLeft},${uniformTop} L${rectRight},${uniformTop} L${rectRight},${topY1}" fill="none" stroke="${colors.blue}" stroke-width="3"/>`;
+    }
+    markup += `</g>`;
+
+    const markers = [
+      {value:windowLeft,label:'z − T',color:colors.blue,anchor:'middle'},
+      {value:0,label:'0',color:colors.orange,anchor:'middle'},
+      {value:windowRight,label:'z',color:colors.blue,anchor:'middle'}
+    ];
+    markers.forEach(marker => {
+      if (marker.value >= domainMin && marker.value <= domainMax) {
+        const px=x(marker.value);
+        markup += `<line x1="${px}" y1="${topY0}" x2="${px}" y2="${topY1}" stroke="${marker.color}" stroke-width="1.2" stroke-dasharray="5 5" opacity=".72"/>`;
+        markup += `<text x="${px}" y="${topY0 + 14}" text-anchor="${marker.anchor}" class="svg-value">${esc(marker.label)}</text>`;
+      }
+    });
+    markup += `<text x="${Math.min(margin.left+plotWidth-8,x(0)+10)}" y="${Math.max(topY0+20,yTop(state.lambda)-10)}" fill="${colors.orange}" font-size="12" font-weight="700"><tspan font-style="italic">f</tspan><tspan baseline-shift="sub" font-size="9">X</tspan><tspan baseline-shift="baseline">(w)</tspan></text>`;
+    if (rectRight > margin.left && rectLeft < margin.left + plotWidth) {
+      markup += `<text x="${clamp((rectLeft+rectRight)/2,margin.left+55,margin.left+plotWidth-55)}" y="${Math.max(topY0+17,uniformTop-9)}" text-anchor="middle" fill="${colors.blue}" font-size="12" font-weight="700"><tspan font-style="italic">f</tspan><tspan baseline-shift="sub" font-size="9">Y</tspan><tspan baseline-shift="baseline">(z − w) = ${esc(fmt(1/state.T,2))}</tspan></text>`;
+    }
+
+    markup += `<text x="${margin.left}" y="${bottomY0 - 20}" class="plot-title">Product: integrate the green area</text>`;
+    markup += productAxes.markup;
+    if (productSamples.length > 1) {
+      const areaPoints = [[productSamples[0][0],0], ...productSamples, [productSamples[productSamples.length-1][0],0]];
+      markup += `<g clip-path="url(#productClip)"><path d="${linePath(areaPoints,x,yProduct)} Z" fill="${colors.green}" fill-opacity=".2" stroke="none"/><path d="${linePath(productSamples,x,yProduct)}" fill="none" stroke="${colors.green}" stroke-width="3"/></g>`;
+      const lpx=x(lower()), upx=x(upper());
+      markup += `<line x1="${lpx}" y1="${bottomY0}" x2="${lpx}" y2="${bottomY1}" stroke="${colors.green}" stroke-width="1.2" stroke-dasharray="4 4"/>`;
+      markup += `<line x1="${upx}" y1="${bottomY0}" x2="${upx}" y2="${bottomY1}" stroke="${colors.green}" stroke-width="1.2" stroke-dasharray="4 4"/>`;
+      markup += `<text x="${lpx+3}" y="${bottomY0+14}" class="svg-value">L = ${esc(fmt(lower()))}</text>`;
+      markup += `<text x="${upx-3}" y="${bottomY0+14}" text-anchor="end" class="svg-value">U = ${esc(fmt(upper()))}</text>`;
+    } else {
+      markup += `<text x="${margin.left+plotWidth/2}" y="${(bottomY0+bottomY1)/2}" text-anchor="middle" class="svg-label">No common support → product is zero</text>`;
+    }
+    convolutionPlot.innerHTML = markup;
+  }
+
+  function drawResult() {
+    const { width: W, height: H } = setSvgSize(resultPlot);
+    const mobile = W < 540;
+    const margin = { left: mobile ? 50 : 62, right: 22, top: 30, bottom: 48 };
+    const domainMin = zMin();
+    const domainMax = zMax();
+    const plotWidth = W - margin.left - margin.right;
+    const yMax = zPdf(state.T) * 1.28 + .0001;
+    const axes = axesMarkup(margin.left, margin.left+plotWidth, margin.top, H-margin.bottom, domainMin, domainMax, yMax, 'z', 'output density', mobile ? 4 : 7);
+    const x=axes.x, y=axes.y;
+    const points=[];
+    for(let i=0;i<=360;i++){
+      const z=domainMin+(domainMax-domainMin)*i/360;
+      points.push([z,zPdf(z)]);
+    }
+    let markup=`<title id="resultPlotTitle">Probability density of Z equals X plus Y</title><desc id="resultPlotDesc">The piecewise convolution density is zero for negative z, rises on zero to T, and decays after T. A marker shows the current z.</desc><defs><clipPath id="resultClip"><rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${H-margin.bottom-margin.top}"/></clipPath></defs>`;
+    markup += `<g clip-path="url(#resultClip)">`;
+    markup += `<rect x="${x(domainMin)}" y="${margin.top}" width="${x(0)-x(domainMin)}" height="${H-margin.bottom-margin.top}" fill="${colors.soft}"/>`;
+    markup += `<rect x="${x(0)}" y="${margin.top}" width="${x(state.T)-x(0)}" height="${H-margin.bottom-margin.top}" fill="${colors.blueSoft}" fill-opacity=".7"/>`;
+    markup += `<rect x="${x(state.T)}" y="${margin.top}" width="${x(domainMax)-x(state.T)}" height="${H-margin.bottom-margin.top}" fill="${colors.greenSoft}" fill-opacity=".65"/>`;
+    markup += `</g>`;
+    markup += axes.markup;
+    markup += `<path d="${linePath(points,x,y)}" fill="none" stroke="${colors.ink}" stroke-width="3" clip-path="url(#resultClip)"/>`;
+    [0,state.T].forEach((value,index)=>{
+      markup += `<line x1="${x(value)}" y1="${margin.top}" x2="${x(value)}" y2="${H-margin.bottom}" stroke="${index?colors.green:colors.blue}" stroke-dasharray="5 5" opacity=".75"/>`;
+      markup += `<text x="${x(value)}" y="${margin.top+14}" text-anchor="middle" class="svg-value">${index?'T':'0'}</text>`;
+    });
+    const currentX=x(state.z), currentY=y(zPdf(state.z));
+    markup += `<line x1="${currentX}" y1="${currentY}" x2="${currentX}" y2="${H-margin.bottom}" stroke="${colors.green}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    markup += `<circle cx="${currentX}" cy="${currentY}" r="6" fill="#fff" stroke="${colors.green}" stroke-width="3"/>`;
+    const labelAnchor = currentX > W - 135 ? 'end' : 'start';
+    const labelX = currentX + (labelAnchor==='end'?-10:10);
+    markup += `<text x="${labelX}" y="${Math.max(margin.top+18,currentY-10)}" text-anchor="${labelAnchor}" class="svg-value">(${esc(fmt(state.z))}, ${esc(fmt(zPdf(state.z),4))})</text>`;
+    markup += `<text x="${x((domainMin+0)/2)}" y="${H-margin.bottom-10}" text-anchor="middle" class="svg-label">no overlap</text>`;
+    markup += `<text x="${x(state.T/2)}" y="${H-margin.bottom-10}" text-anchor="middle" class="svg-label">growing overlap</text>`;
+    markup += `<text x="${x((state.T+domainMax)/2)}" y="${H-margin.bottom-10}" text-anchor="middle" class="svg-label">sliding window</text>`;
+    resultPlot.innerHTML=markup;
+  }
+
+  function liveEquationMarkup() {
+    const caseName=currentCase();
+    if(caseName==='negative'){
+      return `<math display="block" aria-label="No overlap, so f sub Z of z equals zero"><mrow><mtext>No overlap:</mtext><mspace width=".5em"/><msub><mi>f</mi><mi>Z</mi></msub><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn></mrow></math>`;
+    }
+    const lowerNode = caseName==='middle' ? '<mn>0</mn>' : '<mrow><mi>z</mi><mo>−</mo><mi>T</mi></mrow>';
+    return `<math display="block" aria-label="f sub Z of z is the integral from the current lower limit to z of lambda e to the minus lambda w times one over T"><mrow><msub><mi>f</mi><mi>Z</mi></msub><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo>=</mo><msubsup><mo>∫</mo>${lowerNode}<mi>z</mi></msubsup><mi>λ</mi><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi><mi>w</mi></mrow></msup><mfrac><mn>1</mn><mi>T</mi></mfrac><mi>d</mi><mi>w</mi><mo>=</mo><mn>${esc(fmt(zPdf(state.z),4))}</mn></mrow></math>`;
+  }
+
+  function updateDomain() {
+    const min=zMin(), max=zMax();
+    zSlider.min=min.toFixed(3);
+    zSlider.max=max.toFixed(3);
+    state.z=clamp(state.z,min,max);
+    zSlider.value=state.z;
+  }
+
+  function updateUi() {
+    document.getElementById('lambdaValue').textContent=fmt(state.lambda);
+    document.getElementById('tValue').textContent=fmt(state.T);
+    document.getElementById('zValue').textContent=fmt(state.z);
+    document.getElementById('windowMetric').textContent=`[${fmt(state.z-state.T)}, ${fmt(state.z)}]`;
+    document.getElementById('limitsMetric').textContent=state.z<0?'∅ (no overlap)':`[${fmt(lower())}, ${fmt(upper())}]`;
+    document.getElementById('densityMetric').textContent=fmt(zPdf(state.z),4);
+    const labels={negative:'No overlap',middle:'Growing overlap',tail:'Sliding window'};
+    document.getElementById('caseChip').textContent=labels[currentCase()];
+    document.getElementById('liveEquation').innerHTML=liveEquationMarkup();
+    ['negative','middle','tail'].forEach(name=>document.getElementById(`piece${name[0].toUpperCase()+name.slice(1)}`).classList.toggle('active',currentCase()===name));
+    playButton.textContent=state.playing?'❚❚ Pause sweep':'▶ Play sweep';
+    drawConvolution();
+    drawResult();
+  }
+
+  function stopPlayback(){
+    state.playing=false;
+    if(state.animationId) cancelAnimationFrame(state.animationId);
+    state.animationId=0;
+    playButton.textContent='▶ Play sweep';
+  }
+
+  function playbackFrame(time){
+    if(!state.playing) return;
+    if(!state.lastTime) state.lastTime=time;
+    const elapsed=Math.min(64,time-state.lastTime);
+    state.lastTime=time;
+    const speed=(zMax()-zMin())/6500;
+    state.z += elapsed*speed;
+    if(state.z>=zMax()){
+      state.z=zMax();
+      zSlider.value=state.z;
+      stopPlayback();
+      updateUi();
+      return;
+    }
+    zSlider.value=state.z;
+    updateUi();
+    state.animationId=requestAnimationFrame(playbackFrame);
+  }
+
+  lambdaSlider.addEventListener('input',()=>{
+    stopPlayback();
+    state.lambda=Number(lambdaSlider.value);
+    updateDomain();
+    updateUi();
+  });
+  tSlider.addEventListener('input',()=>{
+    stopPlayback();
+    state.T=Number(tSlider.value);
+    updateDomain();
+    updateUi();
+  });
+  zSlider.addEventListener('input',()=>{
+    stopPlayback();
+    state.z=Number(zSlider.value);
+    updateUi();
+  });
+  playButton.addEventListener('click',()=>{
+    if(state.playing){stopPlayback();return;}
+    if(state.z>=zMax()-.001){state.z=zMin();zSlider.value=state.z;}
+    state.playing=true;
+    state.lastTime=0;
+    updateUi();
+    state.animationId=requestAnimationFrame(playbackFrame);
+  });
+  stepBack.addEventListener('click',()=>{
+    stopPlayback();
+    state.z=clamp(state.z-.1,zMin(),zMax());
+    zSlider.value=state.z;
+    updateUi();
+  });
+  stepForward.addEventListener('click',()=>{
+    stopPlayback();
+    state.z=clamp(state.z+.1,zMin(),zMax());
+    zSlider.value=state.z;
+    updateUi();
+  });
+
+  let resizeTimer=0;
+  const observer=new ResizeObserver(()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{drawConvolution();drawResult();},50);
+  });
+  observer.observe(convolutionPlot);
+  observer.observe(resultPlot);
+
+  updateDomain();
+  updateUi();
+})();
+</script>
+</body>
+</html>
