@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stochastic Processes: Fundamentals and Stationarity</title>
+<style>
+  :root{
+    --ink:#172033;--muted:#61708a;--line:#d9e1ec;--paper:#ffffff;--page:#f4f7fb;
+    --blue:#3468d4;--blue-soft:#eaf1ff;--coral:#dd5a48;--coral-soft:#fff0ed;
+    --green:#24866c;--green-soft:#e8f6f1;--amber:#a96808;--amber-soft:#fff7df;
+    --purple:#7857b7;--math:"STIX Two Math","Cambria Math","Latin Modern Math","Times New Roman",Georgia,serif;
+    --shadow:0 14px 40px rgba(29,48,84,.08);--radius:18px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--page);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.5}
+  button,input,select{font:inherit}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(52,104,212,.3);outline-offset:2px}
+  math{font-family:var(--math)}
+  .inline-math{display:inline-block;white-space:nowrap;vertical-align:-.13em}
+  .corner-controls{position:fixed;top:10px;right:10px;z-index:9999;display:flex;align-items:center;gap:8px}
+  .back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.15);transition:border-color .15s ease,color .15s ease}
+  .back-to-index:hover{border-color:#4f7df3;color:#4f7df3}
+  .verify-badge{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:6px 12px;border-radius:999px;display:flex;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap}
+  .verify-badge[data-author]::after{content:"· by @" attr(data-author);opacity:.75;margin-left:4px}
+  .verify-badge[data-verified="true"]{background:#e6f9f1;color:#1a7a4a;border:1px solid #9ad9bb}
+  .verify-badge[data-verified="true"]::before{content:"\2713 Expert-verified"}
+  .verify-badge[data-verified="false"]{background:#fdf3e7;color:#9a5b00;border:1px solid #f0c088}
+  .verify-badge[data-verified="false"]::before{content:"\26A0 AI-generated \00B7 not expert-verified"}
+  .page{width:min(1280px,calc(100% - 32px));margin:0 auto;padding:78px 0 54px}
+  header{text-align:center;margin-bottom:24px}
+  .eyebrow{margin:0 0 8px;color:var(--blue);font-weight:800;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase}
+  h1{margin:0;font-size:clamp(2rem,5vw,3.55rem);letter-spacing:-.045em;line-height:1.04}
+  .lead{max-width:860px;margin:14px auto 0;color:var(--muted);font-size:clamp(1rem,2vw,1.16rem)}
+  .toolbar,.panel,.tour,.concept-strip,.quiz,.academic-note{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .toolbar{display:grid;grid-template-columns:1.35fr repeat(4,minmax(110px,.7fr));gap:14px;padding:18px;margin-bottom:16px;align-items:end}
+  .field label{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;color:var(--muted);font-size:.82rem;font-weight:750}
+  .field select,.field input[type="number"]{width:100%;height:42px;border:1px solid #cbd6e4;border-radius:10px;background:#fff;color:var(--ink);padding:0 10px}
+  .field input[type="range"]{width:100%;accent-color:var(--blue)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+  .btn{border:1px solid #cbd6e4;border-radius:10px;background:#fff;color:var(--ink);padding:9px 14px;font-weight:750;cursor:pointer;transition:transform .15s ease,border-color .15s ease,background .15s ease}
+  .btn:hover{border-color:var(--blue);transform:translateY(-1px)}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn.ghost{background:transparent}
+  .btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+  .tour{display:none;padding:16px 18px;margin-bottom:16px;border-left:5px solid var(--blue)}
+  .tour.active{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
+  .tour-kicker{margin:0 0 3px;color:var(--blue);font-size:.78rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
+  .tour h2{margin:0 0 3px;font-size:1.05rem}
+  .tour p{margin:0;color:var(--muted)}
+  .tour-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+  .status-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .stat{padding:14px 16px;background:var(--paper);border:1px solid var(--line);border-radius:14px}
+  .stat span{display:block;color:var(--muted);font-size:.78rem;font-weight:750;text-transform:uppercase;letter-spacing:.05em}
+  .stat strong{display:block;margin-top:3px;font-size:1.12rem}
+  .workspace{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.75fr);gap:16px;margin-bottom:16px}
+  .panel{padding:18px;min-width:0}
+  .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:8px}
+  .panel h2,.panel h3,.quiz h2{margin:0;font-size:1.08rem}
+  .panel-head p,.section-note{margin:3px 0 0;color:var(--muted);font-size:.87rem}
+  .chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;background:var(--blue-soft);color:#234f9f;font-size:.76rem;font-weight:800;white-space:nowrap}
+  .chip.coral{background:var(--coral-soft);color:#a33e32}
+  .chip.green{background:var(--green-soft);color:#176b55}
+  .plot{width:100%;min-height:330px;display:block;touch-action:none}
+  .plot.compact{min-height:255px}
+  .plot text{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;fill:var(--muted);font-size:12px}
+  .plot .math-text{font-family:var(--math);font-style:italic;fill:var(--ink);font-size:14px}
+  .plot .grid{stroke:#e7edf5;stroke-width:1}
+  .plot .axis{stroke:#9dabc0;stroke-width:1.1}
+  .plot .frame{fill:#fbfcfe;stroke:#d9e1ec;stroke-width:1}
+  .plot .ensemble-path{fill:none;stroke:#8190a6;stroke-width:1.15;opacity:.27;cursor:pointer}
+  .plot .ensemble-path:hover{opacity:.65;stroke-width:2}
+  .plot .selected-path{fill:none;stroke:var(--blue);stroke-width:3.3;opacity:1;pointer-events:none}
+  .plot .slice-line{stroke:var(--coral);stroke-width:2.2;stroke-dasharray:7 5}
+  .plot .slice-point{fill:var(--coral);stroke:#fff;stroke-width:1}
+  .plot .selected-point{fill:var(--ink);stroke:#fff;stroke-width:2}
+  .plot .compare-a{fill:rgba(52,104,212,.44);stroke:var(--blue);stroke-width:1}
+  .plot .compare-b{fill:rgba(221,90,72,.33);stroke:var(--coral);stroke-width:1}
+  .axis-label{font-weight:750;fill:var(--ink)!important}
+  .concept-strip{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center;padding:16px 18px;margin-bottom:16px}
+  .concept{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+  .concept-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:50%;font-size:1.3rem;font-weight:900}
+  .horizontal .concept-icon{background:var(--blue-soft);color:var(--blue)}
+  .vertical .concept-icon{background:var(--coral-soft);color:var(--coral)}
+  .concept h3{margin:0 0 2px;font-size:.96rem}
+  .concept p{margin:0;color:var(--muted);font-size:.84rem}
+  .not-equal{color:#9aa7b9;font-size:1.45rem;font-weight:900}
+  .stationarity{margin-bottom:16px}
+  .stationarity-controls{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px;margin:12px 0 8px}
+  .stationarity-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:16px;align-items:start}
+  .metric-table{width:100%;border-collapse:collapse;font-size:.86rem;margin-top:10px}
+  .metric-table th,.metric-table td{padding:9px 8px;border-bottom:1px solid #e7edf5;text-align:right;font-variant-numeric:tabular-nums}
+  .metric-table th:first-child,.metric-table td:first-child{text-align:left}
+  .metric-table th{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+  .verdict{margin-top:12px;padding:12px 13px;border-radius:12px;background:var(--green-soft);color:#176b55;font-weight:700}
+  .verdict.warning{background:var(--coral-soft);color:#963c32}
+  .verdict small{display:block;margin-top:4px;font-weight:500}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:.82rem;margin:0 0 4px}
+  .swatch{display:inline-block;width:12px;height:12px;margin-right:5px;border-radius:3px;vertical-align:-1px}
+  .swatch.a{background:rgba(52,104,212,.55);border:1px solid var(--blue)}
+  .swatch.b{background:rgba(221,90,72,.42);border:1px solid var(--coral)}
+  .hist-legend{display:flex;gap:15px;flex-wrap:wrap;align-items:center;margin:8px 0 2px;color:var(--muted);font-size:.8rem;font-weight:700}
+  .legend-item{display:inline-flex;align-items:center;gap:7px}
+  .line-key{position:relative;display:inline-block;width:32px;height:12px;flex:0 0 32px}
+  .line-key::before{content:"";position:absolute;left:0;right:0;top:5px}
+  .line-key.selected::before{border-top:2px dashed var(--ink)}
+  .line-key.selected::after{content:"";position:absolute;left:13px;top:1px;width:8px;height:8px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 1px #fff}
+  .line-key.mean::before{border-top:3px solid var(--green)}
+  .line-key.mean::after{content:"";position:absolute;left:13px;top:1px;width:8px;height:8px;background:var(--green);transform:rotate(45deg);box-shadow:0 0 0 1px #fff}
+  .lab-goal{margin:10px 0 12px;padding:12px 14px;border-radius:12px;background:var(--blue-soft);color:#234f9f}
+  .lab-goal strong{margin-right:5px}
+  .lab-guide{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 14px}
+  .guide-step{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 0}
+  .guide-number{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#eef2f8;color:var(--ink);font-weight:850}
+  .guide-step strong{display:block;font-size:.86rem}
+  .guide-step p{margin:2px 0 0;color:var(--muted);font-size:.79rem}
+  .lag-explainer{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:8px 0 14px;padding:12px 14px;border-radius:12px;background:#f8fafc;border:1px solid #e1e8f2}
+  .lag-explainer strong{display:block;margin-bottom:2px;font-size:.86rem}
+  .lag-explainer p{margin:0;color:var(--muted);font-size:.8rem}
+  .lag-formula{flex:0 0 auto;color:#234f9f;font-weight:700;white-space:nowrap}
+  .lab-reading{margin-top:16px;padding-top:15px;border-top:1px solid var(--line)}
+  .lab-reading h3{margin:0;font-size:1rem}
+  .lab-reading-intro{margin:3px 0 12px;color:var(--muted);font-size:.84rem}
+  .reading-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}
+  .reading-item{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:9px 0}
+  .reading-number{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--blue-soft);color:#234f9f;font-size:.78rem;font-weight:850}
+  .reading-item strong{display:block;margin-bottom:3px;font-size:.86rem}
+  .reading-item p{margin:0;color:var(--muted);font-size:.81rem}
+  .lab-scope{margin:12px 0 0;color:var(--muted);font-size:.78rem}
+  .quiz{padding:18px;margin-bottom:16px}
+  .quiz-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+  .question{border-left:3px solid var(--line);padding-left:14px}
+  .question p{margin:0 0 8px;font-weight:750}
+  .option{display:flex;align-items:flex-start;gap:8px;margin:7px 0;color:var(--muted);cursor:pointer}
+  .option input{margin-top:4px;accent-color:var(--blue)}
+  .feedback{min-height:24px;margin:8px 0 0;font-size:.85rem;font-weight:700}
+  .feedback.ok{color:var(--green)}.feedback.no{color:var(--coral)}
+  .academic-note{padding:0;margin-bottom:16px;overflow:hidden}
+  .academic-note summary{padding:15px 18px;cursor:pointer;font-weight:800;background:#fbfcfe}
+  .academic-note .note-body{padding:4px 18px 17px;color:var(--muted)}
+  .academic-note p{margin:10px 0}
+  footer{text-align:center;color:var(--muted);font-size:.82rem;padding-top:8px}
+  @media(max-width:980px){.toolbar{grid-template-columns:repeat(2,1fr)}.workspace,.stationarity-grid{grid-template-columns:1fr}.plot{min-height:300px}.plot.compact{min-height:250px}}
+  @media(max-width:760px){.lab-guide,.reading-grid{grid-template-columns:1fr}.guide-step{padding:4px 0}.lag-explainer{display:block}.lag-formula{margin-top:9px;white-space:normal}}
+  @media(max-width:660px){.corner-controls{left:8px;right:auto;top:8px;gap:5px;flex-direction:column;align-items:flex-start}.back-to-index,.verify-badge{font-size:10px;padding:6px 8px}.page{width:min(100% - 20px,1280px);padding-top:84px}.toolbar{grid-template-columns:1fr}.status-row,.quiz-grid,.stationarity-controls{grid-template-columns:1fr}.concept-strip{grid-template-columns:1fr}.not-equal{text-align:center;transform:rotate(90deg)}.tour.active{grid-template-columns:1fr}.tour-actions{justify-content:flex-start}.panel-head{display:block}.chip{margin-top:8px}.plot{min-height:260px}.plot.compact{min-height:230px}}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
+</style>
+</head>
+<body>
+<div class="corner-controls">
+  <a href="index.html" class="back-to-index">&larr; Back to index</a>
+  <div class="verify-badge" data-verified="false" data-author="henrycarvajal9"></div>
+</div>
+
+<main class="page">
+  <header>
+    <p class="eyebrow">Interactive probability laboratory</p>
+    <h1>Stochastic Processes: Fundamentals and Stationarity</h1>
+    <p class="lead">Explore how a stochastic process connects an ensemble of possible outcomes, individual sample paths, time series, and fixed-time random variables. Generate stationary and nonstationary examples, move through time, and compare distributions, moments, and same-lag covariance to investigate stationarity.</p>
+  </header>
+
+  <section class="toolbar" aria-label="Simulation controls">
+    <div class="field">
+      <label for="model">Process model</label>
+      <select id="model">
+        <option value="ar1">Stationary Gaussian AR(1)</option>
+        <option value="walk">Nonstationary random walk</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="paths">Realizations <output id="pathsOut">80</output></label>
+      <input id="paths" type="range" min="20" max="180" step="10" value="80">
+    </div>
+    <div class="field">
+      <label for="selected">Selected path <output id="selectedOut">1</output></label>
+      <input id="selected" type="range" min="1" max="80" step="1" value="1">
+    </div>
+    <div class="field">
+      <label for="time">Time slice <output id="timeOut">28</output></label>
+      <input id="time" type="range" min="0" max="79" step="1" value="28">
+    </div>
+    <div class="field">
+      <label for="seed">Reproducible seed</label>
+      <input id="seed" type="number" min="1" max="999999" step="1" value="31415">
+    </div>
+  </section>
+
+  <div class="actions" aria-label="Experiment actions">
+    <button class="btn primary" id="generate" type="button">Generate ensemble</button>
+    <button class="btn" id="play" type="button" aria-pressed="false">Play time slice</button>
+    <button class="btn" id="tourStart" type="button">Start guided tour</button>
+    <button class="btn ghost" id="reset" type="button">Reset</button>
+  </div>
+
+  <section class="tour" id="tour" aria-live="polite">
+    <div>
+      <p class="tour-kicker" id="tourKicker">Guided tour · 1 of 7</p>
+      <h2 id="tourTitle">Generate an ensemble</h2>
+      <p id="tourText">One random experiment returns one complete function. Repeating it produces a family of possible functions.</p>
+    </div>
+    <div class="tour-actions">
+      <button class="btn" id="tourPrev" type="button">Previous</button>
+      <button class="btn primary" id="tourNext" type="button">Next</button>
+      <button class="btn ghost" id="tourExit" type="button">Exit</button>
+    </div>
+  </section>
+
+  <section class="status-row">
+    <div class="stat"><span>Current model</span><strong id="modelStatus">Stationary AR(1)</strong></div>
+    <div class="stat"><span>Selected outcome</span><strong id="pathStatus">Outcome 1 → one path</strong></div>
+    <div class="stat"><span>Fixed-time variable</span><strong id="sliceStatus">80 samples of X(28)</strong></div>
+  </section>
+
+  <section class="workspace">
+    <article class="panel" id="ensemblePanel">
+      <div class="panel-head">
+        <div>
+          <h2>Ensemble: many possible functions</h2>
+          <p>Click a curve to select an outcome. Drag the dashed time slice horizontally.</p>
+        </div>
+        <span class="chip">Across outcomes</span>
+      </div>
+      <svg id="ensemblePlot" class="plot" role="img" aria-label="Ensemble of sample paths with a movable vertical time slice"></svg>
+    </article>
+
+    <article class="panel" id="histPanel">
+      <div class="panel-head">
+        <div>
+          <h2>Freeze time: a random variable</h2>
+          <p id="histSubtitle">Values across paths estimate the distribution at the selected time.</p>
+        </div>
+        <span class="chip coral">Vertical slice</span>
+      </div>
+      <div class="hist-legend" aria-label="Histogram reference lines">
+        <span class="legend-item"><i class="line-key selected" aria-hidden="true"></i><span id="selectedLegend">Selected path value</span></span>
+        <span class="legend-item"><i class="line-key mean" aria-hidden="true"></i><span id="meanLegend">Ensemble mean</span></span>
+      </div>
+      <svg id="histPlot" class="plot" role="img" aria-label="Empirical histogram of values across the ensemble at the fixed time"></svg>
+    </article>
+  </section>
+
+  <section class="concept-strip" aria-label="Horizontal and vertical interpretations">
+    <div class="concept horizontal">
+      <div class="concept-icon" aria-hidden="true">→</div>
+      <div>
+        <h3>Read across one outcome</h3>
+        <p>A realization is the complete function <span class="inline-math"><math><msub><mi>x</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></math></span>. In discrete time, one observed realization is a time series.</p>
+      </div>
+    </div>
+    <div class="not-equal" aria-hidden="true">≠</div>
+    <div class="concept vertical">
+      <div class="concept-icon" aria-hidden="true">↓</div>
+      <div>
+        <h3>Slice down at a fixed time</h3>
+        <p>The values across outcomes are samples of the scalar random variable <span class="inline-math"><math><mi>X</mi><mo stretchy="false">(</mo><msub><mi>t</mi><mi>k</mi></msub><mo stretchy="false">)</mo></math></span>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="workspace">
+    <article class="panel" id="pathPanel">
+      <div class="panel-head">
+        <div>
+          <h2>One realization / sample path</h2>
+          <p id="pathSubtitle">Outcome 1 produces one complete time-dependent function.</p>
+        </div>
+        <span class="chip">Horizontal view</span>
+      </div>
+      <svg id="pathPlot" class="plot compact" role="img" aria-label="The selected realization shown as a time series"></svg>
+    </article>
+    <article class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>What should I notice?</h2>
+          <p>Interpret the picture before reading the formula.</p>
+        </div>
+      </div>
+      <div class="verdict" id="notice">
+        The highlighted curve can fluctuate strongly even when the process is stationary.
+        <small>Stationarity is a property of probability laws, not a requirement that every path be flat.</small>
+      </div>
+      <table class="metric-table" aria-label="Fixed-time empirical statistics">
+        <thead><tr><th>At fixed time</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Selected path</td><td id="selectedValue">0.00</td></tr>
+          <tr><td>Ensemble mean</td><td id="sliceMean">0.00</td></tr>
+          <tr><td>Ensemble variance</td><td id="sliceVariance">1.00</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <section class="panel stationarity" id="stationarityPanel">
+    <div class="panel-head">
+      <div>
+        <h2>Stationarity laboratory: shift the observation time</h2>
+        <p>Ask whether the process statistics depend on absolute time or only on the separation between observations.</p>
+      </div>
+      <span class="chip green" id="stationarityChip">Expected: stable law</span>
+    </div>
+    <div class="lab-goal"><strong>Goal:</strong> move the observation from one time anchor to another. A stationary process should keep its marginal distribution and, in the wide-sense case, its same-lag covariance approximately unchanged.</div>
+    <div class="lab-guide" aria-label="How to read the stationarity laboratory">
+      <div class="guide-step">
+        <span class="guide-number">1</span>
+        <div><strong>Compare vertical slices</strong><p>The blue and coral histograms estimate the distributions at two different absolute times.</p></div>
+      </div>
+      <div class="guide-step">
+        <span class="guide-number">2</span>
+        <div><strong>Compare mean and variance</strong><p>Similar values support marginal and second-moment stability; finite samples will not match exactly.</p></div>
+      </div>
+      <div class="guide-step">
+        <span class="guide-number">3</span>
+        <div><strong>Hold the lag fixed</strong><p>Measure dependence between observations separated by the same lag, but starting at different times.</p></div>
+      </div>
+    </div>
+    <div class="stationarity-controls">
+      <div class="field">
+        <label for="timeA">First anchor time <output id="timeAOut">12</output></label>
+        <input id="timeA" type="range" min="0" max="74" value="12">
+      </div>
+      <div class="field">
+        <label for="timeB">Second anchor time <output id="timeBOut">56</output></label>
+        <input id="timeB" type="range" min="0" max="74" value="56">
+      </div>
+      <div class="field">
+        <label for="lag">Common separation (lag) <output id="lagOut">4</output></label>
+        <input id="lag" type="range" min="1" max="5" value="4">
+      </div>
+    </div>
+    <div class="lag-explainer">
+      <div>
+        <strong>What “common lag” means</strong>
+        <p id="lagPairExplanation">The first pair uses times 12 and 16; the second pair uses times 56 and 60. Both pairs are separated by 4 steps.</p>
+      </div>
+      <div class="lag-formula" aria-label="Covariance at the first anchor and common lag compared with covariance at the second anchor and common lag">
+        <math>
+          <mi>Cov</mi><mo stretchy="false">[</mo><mi>X</mi><mo stretchy="false">(</mo><msub><mi>t</mi><mi>a</mi></msub><mo stretchy="false">)</mo><mo>,</mo><mi>X</mi><mo stretchy="false">(</mo><msub><mi>t</mi><mi>a</mi></msub><mo>+</mo><mi>ℓ</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo>
+          <mo>↔</mo>
+          <mi>Cov</mi><mo stretchy="false">[</mo><mi>X</mi><mo stretchy="false">(</mo><msub><mi>t</mi><mi>b</mi></msub><mo stretchy="false">)</mo><mo>,</mo><mi>X</mi><mo stretchy="false">(</mo><msub><mi>t</mi><mi>b</mi></msub><mo>+</mo><mi>ℓ</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo>
+        </math>
+      </div>
+    </div>
+    <div class="stationarity-grid">
+      <div>
+        <div class="legend" aria-label="Histogram legend">
+          <span><i class="swatch a"></i>First time</span>
+          <span><i class="swatch b"></i>Shifted time</span>
+        </div>
+        <svg id="comparePlot" class="plot compact" role="img" aria-label="Overlaid empirical distributions at two selected times"></svg>
+      </div>
+      <div>
+        <table class="metric-table" aria-label="Stationarity comparison statistics">
+          <thead><tr><th>Statistic</th><th id="headA">Anchor 12</th><th id="headB">Anchor 56</th></tr></thead>
+          <tbody>
+            <tr><td>Mean</td><td id="meanA">0.00</td><td id="meanB">0.00</td></tr>
+            <tr><td>Variance</td><td id="varA">1.00</td><td id="varB">1.00</td></tr>
+            <tr><td id="covLabel">Same-lag covariance (lag 4)</td><td id="covA">0.00</td><td id="covB">0.00</td></tr>
+          </tbody>
+        </table>
+        <div class="verdict" id="stationarityVerdict" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="lab-reading" aria-labelledby="labReadingTitle">
+      <h3 id="labReadingTitle">How to read the current result</h3>
+      <p class="lab-reading-intro">Read these four observations from top to bottom, then move an anchor or change the process model and compare again.</p>
+      <div class="reading-grid">
+        <div class="reading-item">
+          <span class="reading-number">1</span>
+          <div><strong>What the two histograms show</strong><p id="readSlices">Blue collects X(first anchor time) across the ensemble; coral collects X(second anchor time). Each path contributes one value to each histogram. More overlap means the two fixed-time empirical distributions are more alike.</p></div>
+        </div>
+        <div class="reading-item">
+          <span class="reading-number">2</span>
+          <div><strong>What to compare first</strong><p id="readMoments">Compare whether the histogram shapes overlap, then compare their means and variances in the table. Close—but not necessarily identical—values support stability because the ensemble is finite.</p></div>
+        </div>
+        <div class="reading-item">
+          <span class="reading-number">3</span>
+          <div><strong>“Same-lag covariance” in plain language</strong><p id="readCovariance">Compare X(first anchor time) with X(first anchor time + common lag), then repeat from the second anchor time. Covariance describes how strongly observations the same distance apart tend to vary together across realizations.</p></div>
+        </div>
+        <div class="reading-item">
+          <span class="reading-number">4</span>
+          <div><strong>What conclusion is reasonable</strong><p id="readConclusion">Substantial histogram overlap and similar means, variances, and same-lag covariances support wide-sense stationarity. Systematic shifts or spreading challenge it; small mismatches may come from a finite ensemble.</p></div>
+        </div>
+      </div>
+    </div>
+    <p class="lab-scope">This is an empirical diagnostic: it illustrates marginal stability and wide-sense stationarity conditions. It does not, by itself, prove strict-sense stationarity.</p>
+  </section>
+
+  <section class="quiz" id="quizPanel">
+    <h2>Concept check</h2>
+    <p class="section-note">Use the picture, not memorized vocabulary.</p>
+    <div class="quiz-grid">
+      <div class="question" data-question="slice">
+        <p>At one fixed time, what do the values across all paths represent?</p>
+        <label class="option"><input type="radio" name="q1" value="a"> A new time series</label>
+        <label class="option"><input type="radio" name="q1" value="b"> Samples of one random variable</label>
+        <label class="option"><input type="radio" name="q1" value="c"> Independent time samples from one path</label>
+        <button class="btn" type="button" data-check="q1" data-answer="b" data-correct="Correct — a vertical slice gives one sample of X(t) from every realization." data-incorrect="Not quite — freeze time and collect one value from each path.">Check answer</button>
+        <p class="feedback" id="q1Feedback" aria-live="polite"></p>
+      </div>
+      <div class="question" data-question="stationary">
+        <p>Can a stationary process have sample paths that visibly fluctuate?</p>
+        <label class="option"><input type="radio" name="q2" value="a"> Yes, stationarity concerns probability laws</label>
+        <label class="option"><input type="radio" name="q2" value="b"> No, every stationary path must be constant</label>
+        <button class="btn" type="button" data-check="q2" data-answer="a" data-correct="Correct — stationarity describes probability laws, not flat sample paths." data-incorrect="Not quite — a stationary path may fluctuate strongly; the probability law is what stays stable.">Check answer</button>
+        <p class="feedback" id="q2Feedback" aria-live="polite"></p>
+      </div>
+      <div class="question" data-question="lag-pair">
+        <p>If the first anchor is 17 and the common lag is 5, which observations form the first covariance pair?</p>
+        <label class="option"><input type="radio" name="q3" value="a"> X(17) and X(5)</label>
+        <label class="option"><input type="radio" name="q3" value="b"> X(17) and X(22)</label>
+        <label class="option"><input type="radio" name="q3" value="c"> X(5) and X(22)</label>
+        <button class="btn" type="button" data-check="q3" data-answer="b" data-correct="Correct — the second observation is anchor + lag: 17 + 5 = 22." data-incorrect="Not quite — keep the anchor at 17 and move forward exactly 5 steps.">Check answer</button>
+        <p class="feedback" id="q3Feedback" aria-live="polite"></p>
+      </div>
+      <div class="question" data-question="same-lag">
+        <p>Similar same-lag covariances at two different anchors support which interpretation?</p>
+        <label class="option"><input type="radio" name="q4" value="a"> Dependence is approximately determined by the separation, not absolute time</label>
+        <label class="option"><input type="radio" name="q4" value="b"> Every observation in the two pairs has the same value</label>
+        <label class="option"><input type="radio" name="q4" value="c"> The two sample paths must be identical</label>
+        <button class="btn" type="button" data-check="q4" data-answer="a" data-correct="Correct — for a wide-sense stationary process, covariance depends on the lag rather than the starting time." data-incorrect="Not quite — covariance compares dependence across the ensemble; it does not require equal values or identical paths.">Check answer</button>
+        <p class="feedback" id="q4Feedback" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <details class="academic-note">
+    <summary>Three meanings of stationarity</summary>
+    <div class="note-body">
+      <p><strong>Marginal stationarity:</strong> the distribution of <span class="inline-math"><math><mi>X</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></math></span> does not depend on the time index.</p>
+      <p><strong>Wide-sense stationarity:</strong> the mean is constant and autocovariance depends only on the lag, not on the absolute time.</p>
+      <p><strong>Strict-sense stationarity:</strong> every finite-dimensional joint distribution is invariant under a common time shift. Equal one-time PDFs are therefore necessary marginal evidence, but they are not sufficient by themselves to establish strict-sense stationarity.</p>
+      <p>Small empirical differences between slices are expected because a finite ensemble has Monte Carlo variability.</p>
+    </div>
+  </details>
+
+  <footer>Built for exploration: one ensemble, two directions, one precise distinction.</footer>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const STEPS = 80;
+  const defaults = { model:'ar1', paths:80, selected:1, time:28, seed:31415, timeA:12, timeB:56, lag:4 };
+  const state = { data:[], model:defaults.model, timer:null, tour:-1, drag:{active:false,moved:false,startX:0} };
+  const $ = id => document.getElementById(id);
+  const els = {
+    model:$('model'), paths:$('paths'), selected:$('selected'), time:$('time'), seed:$('seed'),
+    timeA:$('timeA'), timeB:$('timeB'), lag:$('lag'), play:$('play')
+  };
+
+  const tourSteps = [
+    ['Generate an ensemble','One random experiment returns one complete function. Repeating it produces a family of possible functions.'],
+    ['Select one outcome','The blue curve is one realization. Change “Selected path” or click another curve in the ensemble.'],
+    ['Follow the path horizontally','Reading one outcome from left to right gives its sample path; on a discrete index, it is one observed time series.'],
+    ['Freeze the time index','The dashed vertical line fixes time. Every intersection is now a scalar value, not a whole function.'],
+    ['Build the random variable','The histogram collects those intersections across the ensemble and estimates the distribution of the fixed-time random variable.'],
+    ['Shift and compare','Use the stationarity laboratory. Similar finite-sample summaries support stability; small differences are Monte Carlo variation.'],
+    ['Check your interpretation','Answer the four questions below. They reinforce horizontal paths, vertical ensemble slices, common lag, and same-lag covariance.']
+  ];
+
+  function mulberry32(seed){
+    let a = seed >>> 0;
+    return () => {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function gaussian(rng){
+    let u=0,v=0;
+    while(u===0) u=rng();
+    while(v===0) v=rng();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+  function stats(values){
+    const n=values.length;
+    const mean=values.reduce((a,b)=>a+b,0)/n;
+    const variance=values.reduce((a,b)=>a+(b-mean)*(b-mean),0)/Math.max(1,n-1);
+    return {mean,variance};
+  }
+  function covariance(a,b){
+    const ma=stats(a).mean, mb=stats(b).mean;
+    return a.reduce((s,x,i)=>s+(x-ma)*(b[i]-mb),0)/Math.max(1,a.length-1);
+  }
+  function fmt(x){ return Number.isFinite(x) ? x.toFixed(2) : '—'; }
+  function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
+
+  function generateData(){
+    stopPlayback();
+    const n=Number(els.paths.value);
+    const seed=clamp(Math.trunc(Number(els.seed.value)||defaults.seed),1,999999);
+    els.seed.value=seed;
+    const rng=mulberry32(seed);
+    const model=els.model.value;
+    const all=[];
+    for(let i=0;i<n;i++){
+      const series=[];
+      if(model==='ar1'){
+        const phi=.86;
+        const innovation=Math.sqrt(1-phi*phi);
+        series.push(gaussian(rng));
+        for(let t=1;t<STEPS;t++) series.push(phi*series[t-1]+innovation*gaussian(rng));
+      }else{
+        series.push(.28*gaussian(rng));
+        for(let t=1;t<STEPS;t++) series.push(series[t-1]+.035+.18*gaussian(rng));
+      }
+      all.push(series);
+    }
+    state.data=all;
+    state.model=model;
+    els.selected.max=n;
+    els.selected.value=clamp(Number(els.selected.value),1,n);
+    renderAll();
+  }
+
+  function svgEl(name,attrs={},text=''){
+    const el=document.createElementNS('http://www.w3.org/2000/svg',name);
+    Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,String(v)));
+    if(text!=='') el.textContent=text;
+    return el;
+  }
+  function clearSvg(svg,w,h,title,desc){
+    svg.replaceChildren();
+    svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    svg.append(svgEl('title',{},title),svgEl('desc',{},desc));
+  }
+  function extent(values){
+    let lo=Infinity,hi=-Infinity;
+    values.forEach(v=>{if(v<lo)lo=v;if(v>hi)hi=v;});
+    if(lo===hi){lo-=1;hi+=1;}
+    const pad=(hi-lo)*.1;
+    return [lo-pad,hi+pad];
+  }
+  function linePath(values,x,y){
+    return values.map((v,i)=>(i?'L':'M')+x(i).toFixed(2)+','+y(v).toFixed(2)).join(' ');
+  }
+  function addAxes(svg,{w,h,m,xTicks=5,yTicks=5,xDomain=[0,STEPS-1],yDomain}){
+    const x=v=>m.l+(v-xDomain[0])/(xDomain[1]-xDomain[0])*(w-m.l-m.r);
+    const y=v=>h-m.b-(v-yDomain[0])/(yDomain[1]-yDomain[0])*(h-m.t-m.b);
+    svg.append(svgEl('rect',{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b,class:'frame'}));
+    for(let i=0;i<=yTicks;i++){
+      const v=yDomain[0]+i/yTicks*(yDomain[1]-yDomain[0]);
+      const yy=y(v);
+      svg.append(svgEl('line',{x1:m.l,x2:w-m.r,y1:yy,y2:yy,class:'grid'}));
+      svg.append(svgEl('text',{x:m.l-9,y:yy+4,'text-anchor':'end'},fmt(v)));
+    }
+    for(let i=0;i<=xTicks;i++){
+      const v=xDomain[0]+i/xTicks*(xDomain[1]-xDomain[0]);
+      const xx=x(v);
+      svg.append(svgEl('line',{x1:xx,x2:xx,y1:m.t,y2:h-m.b,class:'grid'}));
+      svg.append(svgEl('text',{x:xx,y:h-m.b+20,'text-anchor':'middle'},String(Math.round(v))));
+    }
+    svg.append(svgEl('text',{x:(m.l+w-m.r)/2,y:h-8,'text-anchor':'middle',class:'axis-label'},'time index'));
+    const yl=svgEl('text',{x:15,y:(m.t+h-m.b)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(m.t+h-m.b)/2})`},'process value');
+    svg.append(yl);
+    return {x,y};
+  }
+  function appendMathXLabel(svg,x,y,index,time,anchor='start'){
+    const label=svgEl('text',{x,y,'text-anchor':anchor,class:'math-text'});
+    label.append(svgEl('tspan',{},'x'),svgEl('tspan',{'baseline-shift':'sub','font-size':'10'},String(index)),svgEl('tspan',{'baseline-shift':'baseline'},`(${time})`));
+    svg.append(label);
+  }
+
+  function renderEnsemble(){
+    const svg=$('ensemblePlot'), w=Math.max(300,Math.round(svg.clientWidth||820)),h=380,m={l:58,r:24,t:22,b:46};
+    clearSvg(svg,w,h,'Ensemble and fixed-time slice','Many sample paths are shown. One path is highlighted and a vertical slice intersects all paths at the selected time.');
+    const flat=state.data.flat();
+    const yd=extent(flat), scales=addAxes(svg,{w,h,m,yDomain:yd,xTicks:w<480?3:6,yTicks:5});
+    const selected=Number(els.selected.value)-1, time=Number(els.time.value);
+    state.data.forEach((series,i)=>{
+      const p=svgEl('path',{d:linePath(series,scales.x,scales.y),class:'ensemble-path','data-index':i,'aria-label':`Select realization ${i+1}`});
+      p.addEventListener('click',()=>{els.selected.value=i+1;renderAll();});
+      svg.append(p);
+    });
+    svg.append(svgEl('path',{d:linePath(state.data[selected],scales.x,scales.y),class:'selected-path'}));
+    const sx=scales.x(time);
+    svg.append(svgEl('line',{x1:sx,x2:sx,y1:m.t,y2:h-m.b,class:'slice-line'}));
+    state.data.forEach((series,i)=>{
+      svg.append(svgEl('circle',{cx:sx,cy:scales.y(series[time]),r:i===selected?4.8:2.1,class:i===selected?'selected-point':'slice-point'}));
+    });
+    appendMathXLabel(svg,Math.min(w-m.r-60,sx+8),m.t+18,'i',time);
+    svg.style.cursor='crosshair';
+    const point=e=>{
+      const rect=svg.getBoundingClientRect();
+      return {px:(e.clientX-rect.left)/rect.width*w,py:(e.clientY-rect.top)/rect.height*h};
+    };
+    const timeAt=e=>{
+      const {px}=point(e);
+      return Math.round((clamp(px,m.l,w-m.r)-m.l)/(w-m.l-m.r)*(STEPS-1));
+    };
+    svg.onpointerdown=e=>{
+      state.drag={active:true,moved:false,startX:e.clientX,pointerId:e.pointerId};
+      svg.setPointerCapture(e.pointerId);
+    };
+    svg.onpointermove=e=>{
+      if(!state.drag.active)return;
+      if(Math.abs(e.clientX-state.drag.startX)>3)state.drag.moved=true;
+      if(!state.drag.moved)return;
+      const t=timeAt(e);
+      els.time.value=t;renderAll();
+    };
+    svg.onpointerup=e=>{
+      if(!state.drag.active)return;
+      if(!state.drag.moved){
+        const {py}=point(e),t=timeAt(e);
+        let nearest=0,distance=Infinity;
+        state.data.forEach((series,i)=>{
+          const d=Math.abs(scales.y(series[t])-py);
+          if(d<distance){distance=d;nearest=i;}
+        });
+        els.selected.value=nearest+1;
+      }
+      state.drag.active=false;
+      if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);
+      renderAll();
+    };
+    svg.onpointercancel=()=>{state.drag.active=false;};
+  }
+
+  function makeBins(values,count,domain){
+    const [lo,hi]=domain, width=(hi-lo)/count;
+    const bins=Array.from({length:count},(_,i)=>({x0:lo+i*width,x1:lo+(i+1)*width,n:0}));
+    values.forEach(v=>{const idx=clamp(Math.floor((v-lo)/width),0,count-1);bins[idx].n++;});
+    return bins;
+  }
+  function renderHistogram(){
+    const svg=$('histPlot'),w=Math.max(300,Math.round(svg.clientWidth||460)),h=380,m={l:55,r:20,t:25,b:48};
+    clearSvg(svg,w,h,'Fixed-time empirical distribution','A histogram collects one value from every realization at the fixed time. The selected realization is marked.');
+    const time=Number(els.time.value), selected=Number(els.selected.value)-1;
+    const values=state.data.map(s=>s[time]), summary=stats(values), domain=extent(values), bins=makeBins(values,w<480?10:14,domain);
+    const ymax=Math.max(...bins.map(b=>b.n),1);
+    const x=v=>m.l+(v-domain[0])/(domain[1]-domain[0])*(w-m.l-m.r);
+    const y=v=>h-m.b-v/ymax*(h-m.t-m.b);
+    svg.append(svgEl('rect',{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b,class:'frame'}));
+    bins.forEach(b=>{
+      svg.append(svgEl('rect',{x:x(b.x0)+1,y:y(b.n),width:Math.max(1,x(b.x1)-x(b.x0)-2),height:h-m.b-y(b.n),fill:'rgba(221,90,72,.42)',stroke:'var(--coral)','stroke-width':1}));
+    });
+    for(let i=0;i<=4;i++){
+      const v=domain[0]+i/4*(domain[1]-domain[0]);
+      svg.append(svgEl('text',{x:x(v),y:h-m.b+20,'text-anchor':'middle'},fmt(v)));
+    }
+    for(let i=0;i<=4;i++){
+      const v=Math.round(i/4*ymax), yy=y(v);
+      svg.append(svgEl('line',{x1:m.l,x2:w-m.r,y1:yy,y2:yy,class:'grid'}));
+      svg.append(svgEl('text',{x:m.l-8,y:yy+4,'text-anchor':'end'},String(v)));
+    }
+    const selectedValue=state.data[selected][time], sx=x(selectedValue);
+    const meanX=x(summary.mean);
+    svg.append(svgEl('line',{x1:meanX,x2:meanX,y1:m.t,y2:h-m.b,stroke:'var(--green)','stroke-width':3,class:'hist-mean-line'}));
+    svg.append(svgEl('rect',{x:meanX-4,y:m.t+2,width:8,height:8,fill:'var(--green)',transform:`rotate(45 ${meanX} ${m.t+6})`,class:'hist-mean-marker'}));
+    svg.append(svgEl('line',{x1:sx,x2:sx,y1:m.t,y2:h-m.b,stroke:'var(--ink)','stroke-width':2,'stroke-dasharray':'5 4',class:'hist-selected-line'}));
+    svg.append(svgEl('circle',{cx:sx,cy:m.t+10,r:5,class:'selected-point'}));
+    svg.append(svgEl('text',{x:(m.l+w-m.r)/2,y:h-8,'text-anchor':'middle',class:'axis-label'},'value across outcomes'));
+    svg.append(svgEl('text',{x:15,y:(m.t+h-m.b)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(m.t+h-m.b)/2})`},'count'));
+    $('histSubtitle').textContent=`Each of the ${values.length} paths contributes one value at time ${time}.`;
+    $('selectedLegend').textContent=`Selected path value = ${fmt(selectedValue)}`;
+    $('meanLegend').textContent=`Ensemble mean = ${fmt(summary.mean)}`;
+  }
+
+  function renderPath(){
+    const svg=$('pathPlot'),w=Math.max(300,Math.round(svg.clientWidth||760)),h=290,m={l:55,r:22,t:20,b:44};
+    clearSvg(svg,w,h,'Selected sample path','One complete realization is highlighted, with its value at the current time marked.');
+    const selected=Number(els.selected.value)-1,time=Number(els.time.value),series=state.data[selected];
+    const yd=extent(series),scales=addAxes(svg,{w,h,m,yDomain:yd,xTicks:w<480?3:6,yTicks:4});
+    svg.append(svgEl('path',{d:linePath(series,scales.x,scales.y),class:'selected-path'}));
+    const px=scales.x(time),py=scales.y(series[time]);
+    svg.append(svgEl('line',{x1:px,x2:px,y1:m.t,y2:h-m.b,class:'slice-line'}));
+    svg.append(svgEl('circle',{cx:px,cy:py,r:5.2,class:'selected-point'}));
+    appendMathXLabel(svg,Math.min(w-m.r-70,px+9),Math.max(m.t+15,py-10),selected+1,time);
+    $('pathSubtitle').textContent=`Outcome ${selected+1} produces one complete time-dependent function.`;
+  }
+
+  function renderComparison(){
+    const timeA=Number(els.timeA.value),timeB=Number(els.timeB.value),lag=Number(els.lag.value);
+    const a=state.data.map(s=>s[timeA]),b=state.data.map(s=>s[timeB]);
+    const aLag=state.data.map(s=>s[timeA+lag]),bLag=state.data.map(s=>s[timeB+lag]);
+    const sa=stats(a),sb=stats(b),ca=covariance(a,aLag),cb=covariance(b,bLag);
+    const svg=$('comparePlot'),w=Math.max(300,Math.round(svg.clientWidth||760)),h=290,m={l:55,r:20,t:22,b:45};
+    clearSvg(svg,w,h,'Distribution comparison at shifted times','Two empirical histograms compare the ensemble distribution at the first and shifted times.');
+    const binCount=w<480?10:15;
+    const domain=extent(a.concat(b)),binsA=makeBins(a,binCount,domain),binsB=makeBins(b,binCount,domain);
+    const ymax=Math.max(1,...binsA.map(x=>x.n),...binsB.map(x=>x.n));
+    const x=v=>m.l+(v-domain[0])/(domain[1]-domain[0])*(w-m.l-m.r);
+    const y=v=>h-m.b-v/ymax*(h-m.t-m.b);
+    svg.append(svgEl('rect',{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b,class:'frame'}));
+    binsA.forEach((bin,i)=>{
+      const binB=binsB[i];
+      const bw=x(bin.x1)-x(bin.x0);
+      svg.append(svgEl('rect',{x:x(bin.x0)+1,y:y(bin.n),width:Math.max(1,bw-2),height:h-m.b-y(bin.n),class:'compare-a'}));
+      svg.append(svgEl('rect',{x:x(binB.x0)+bw*.18,y:y(binB.n),width:Math.max(1,bw*.64),height:h-m.b-y(binB.n),class:'compare-b'}));
+    });
+    for(let i=0;i<=4;i++){
+      const v=domain[0]+i/4*(domain[1]-domain[0]);
+      svg.append(svgEl('text',{x:x(v),y:h-m.b+20,'text-anchor':'middle'},fmt(v)));
+      const count=Math.round(i/4*ymax),yy=y(count);
+      svg.append(svgEl('line',{x1:m.l,x2:w-m.r,y1:yy,y2:yy,class:'grid'}));
+      svg.append(svgEl('text',{x:m.l-8,y:yy+4,'text-anchor':'end'},String(count)));
+    }
+    svg.append(svgEl('text',{x:(m.l+w-m.r)/2,y:h-7,'text-anchor':'middle',class:'axis-label'},'process value'));
+    svg.append(svgEl('text',{x:15,y:(m.t+h-m.b)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(m.t+h-m.b)/2})`},'count'));
+    $('headA').textContent=`Anchor ${timeA}`;$('headB').textContent=`Anchor ${timeB}`;
+    $('meanA').textContent=fmt(sa.mean);$('meanB').textContent=fmt(sb.mean);
+    $('varA').textContent=fmt(sa.variance);$('varB').textContent=fmt(sb.variance);
+    $('covA').textContent=fmt(ca);$('covB').textContent=fmt(cb);$('covLabel').textContent=`Same-lag covariance (lag ${lag})`;
+    $('lagPairExplanation').textContent=`The first pair uses times ${timeA} and ${timeA+lag}; the second pair uses times ${timeB} and ${timeB+lag}. Both pairs are separated by ${lag} step${lag===1?'':'s'}.`;
+    const verdict=$('stationarityVerdict');
+    if(state.model==='ar1'){
+      verdict.className='verdict';
+      verdict.innerHTML='Approximately stable under the time shift.<small>Theoretical mean = 0, variance = 1, and lag covariance depends only on the lag. Finite ensembles still fluctuate.</small>';
+      $('stationarityChip').textContent='Expected: stable law';
+    }else{
+      verdict.className='verdict warning';
+      verdict.innerHTML='The distribution changes with absolute time.<small>The random walk accumulates drift and innovations, so its mean and variance evolve.</small>';
+      $('stationarityChip').textContent='Expected: changing law';
+    }
+  }
+
+  function renderStatus(){
+    const time=Number(els.time.value),selected=Number(els.selected.value)-1,values=state.data.map(s=>s[time]),s=stats(values);
+    $('pathsOut').textContent=els.paths.value;$('selectedOut').textContent=els.selected.value;$('timeOut').textContent=time;
+    $('timeAOut').textContent=els.timeA.value;$('timeBOut').textContent=els.timeB.value;$('lagOut').textContent=els.lag.value;
+    $('modelStatus').textContent=state.model==='ar1'?'Stationary AR(1)':'Nonstationary random walk';
+    $('pathStatus').textContent=`Outcome ${selected+1} → one path`;
+    $('sliceStatus').textContent=`${state.data.length} samples of X(${time})`;
+    $('selectedValue').textContent=fmt(state.data[selected][time]);$('sliceMean').textContent=fmt(s.mean);$('sliceVariance').textContent=fmt(s.variance);
+    const notice=$('notice');
+    if(state.model==='ar1'){
+      notice.className='verdict';
+      notice.innerHTML='The highlighted curve can fluctuate strongly even when the process is stationary.<small>Stationarity is a property of probability laws, not a requirement that every path be flat.</small>';
+    }else{
+      notice.className='verdict warning';
+      notice.innerHTML='One path alone does not define the ensemble distribution.<small>Use the vertical slice to see how the random-walk distribution spreads and drifts across outcomes.</small>';
+    }
+  }
+  function renderAll(){
+    if(!state.data.length)return;
+    renderStatus();renderEnsemble();renderHistogram();renderPath();renderComparison();
+  }
+
+  function stopPlayback(){
+    if(state.timer){clearInterval(state.timer);state.timer=null;}
+    els.play.textContent='Play time slice';els.play.setAttribute('aria-pressed','false');
+  }
+  function togglePlayback(){
+    if(state.timer){stopPlayback();return;}
+    els.play.textContent='Pause time slice';els.play.setAttribute('aria-pressed','true');
+    state.timer=setInterval(()=>{
+      let next=Number(els.time.value)+1;
+      if(next>=STEPS)next=0;
+      els.time.value=next;renderAll();
+    },420);
+  }
+  function reset(){
+    stopPlayback();
+    Object.entries(defaults).forEach(([k,v])=>{if(els[k])els[k].value=v;});
+    state.tour=-1;$('tour').classList.remove('active');generateData();
+    document.querySelectorAll('.feedback').forEach(x=>{x.textContent='';x.className='feedback';});
+    document.querySelectorAll('input[type="radio"]').forEach(x=>x.checked=false);
+  }
+  function updateTour(){
+    const tour=$('tour');
+    if(state.tour<0){tour.classList.remove('active');return;}
+    tour.classList.add('active');
+    const [title,text]=tourSteps[state.tour];
+    $('tourKicker').textContent=`Guided tour · ${state.tour+1} of ${tourSteps.length}`;
+    $('tourTitle').textContent=title;$('tourText').textContent=text;
+    $('tourPrev').disabled=state.tour===0;
+    $('tourNext').textContent=state.tour===tourSteps.length-1?'Finish':'Next';
+    const targets=[$('ensemblePanel'),$('ensemblePanel'),$('pathPanel'),$('ensemblePanel'),$('histPanel'),$('stationarityPanel'),$('quizPanel')];
+    if(state.tour>0) targets[state.tour].scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});
+  }
+  function tourNext(){
+    if(state.tour===3){els.time.value=40;renderAll();}
+    if(state.tour===4){els.paths.value=140;generateData();}
+    if(state.tour>=tourSteps.length-1){state.tour=-1;}else state.tour++;
+    updateTour();
+  }
+
+  $('generate').addEventListener('click',generateData);
+  $('reset').addEventListener('click',reset);
+  els.play.addEventListener('click',togglePlayback);
+  els.model.addEventListener('change',generateData);
+  els.paths.addEventListener('input',()=>{$('pathsOut').textContent=els.paths.value;});
+  els.paths.addEventListener('change',generateData);
+  els.selected.addEventListener('input',renderAll);
+  els.time.addEventListener('input',renderAll);
+  [els.timeA,els.timeB,els.lag].forEach(el=>el.addEventListener('input',renderAll));
+  $('tourStart').addEventListener('click',()=>{state.tour=0;updateTour();});
+  $('tourPrev').addEventListener('click',()=>{state.tour=Math.max(0,state.tour-1);updateTour();});
+  $('tourNext').addEventListener('click',tourNext);
+  $('tourExit').addEventListener('click',()=>{state.tour=-1;updateTour();});
+  document.querySelectorAll('[data-check]').forEach(btn=>btn.addEventListener('click',()=>{
+    const name=btn.dataset.check, chosen=document.querySelector(`input[name="${name}"]:checked`), feedback=$(name+'Feedback');
+    if(!chosen){feedback.textContent='Choose an answer first.';feedback.className='feedback no';return;}
+    const ok=chosen.value===btn.dataset.answer;
+    feedback.textContent=ok?btn.dataset.correct:btn.dataset.incorrect;
+    feedback.className='feedback '+(ok?'ok':'no');
+  }));
+  let resizeTimer=null;
+  window.addEventListener('resize',()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(renderAll,80);
+  });
+  window.addEventListener('beforeunload',stopPlayback);
+  generateData();
+})();
+</script>
+</body>
+</html>
