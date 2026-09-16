@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why the Penalty Term Helps · Regularization in Regression</title>
+<!--
+  ============================================================================
+  REGULARIZATION IN REGRESSION — WHY DOES THE PENALTY TERM HELP?
+  ----------------------------------------------------------------------------
+  Self-contained teaching widget. Everything (HTML + CSS + JS) in this file.
+
+  THE ARGUMENT (panels read left-to-right, top-to-bottom = logical order):
+    A. The fit        — degree-9 curve through noisy data
+    B. The theta bars — the DEGREE NEVER CHANGES; the coefficients shrink
+    C. J decomposed   — the tug-of-war: MSE part vs penalty part
+    D. Train vs test  — train error rises, test error is U-shaped
+
+  DESIGN NOTES:
+  - LIGHT academic theme (maintainer preference).
+  - NO looping animations. Everything recomputes on slider drag.
+  - Opens DELIBERATELY BROKEN at lambda = 0 so the student sees a perfect
+    fit next to exploding coefficients. That juxtaposition is the hook.
+  - The closed-form ridge solution is computed in JS but NEVER shown. No
+    matrix notation anywhere in the UI — the metaphor is "lambda is the
+    PRICE of coefficient size" and the optimizer decides what it can afford.
+  - Math uses native MathML. SVG <text> cannot contain MathML, so axis and
+    diagram labels use italic math-font <tspan> subscripts (see svgSub()).
+  - The equation on screen matches the lecture slide exactly, including the
+    j=1 lower limit (the intercept is not penalized).
+
+  HOW TO MODIFY:
+  - Data / truth function: the DATA section (TRUTH, N_TRAIN, NOISE).
+  - Polynomial degree: DEGREE (deliberately fixed, no UI control — see the
+    "we are not changing the model" note in the markup).
+  - Narration thresholds: narrate().
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:       #f5f8fd;
+    --bg-soft:  #eef3fa;
+    --panel:    #ffffff;
+    --panel-2:  #f2f6fc;
+    --line:     #d9e2ef;
+    --text:     #1f2937;
+    --text-dim: #64708a;
+    --accent:   #3b6fd4;
+
+    /* The two halves of J. These exact colors are reused in the equation,
+       the theta bars and the stacked cost bar — the color link does the work
+       that a derivation would otherwise have to do. */
+    --mse:      #c2185b;  --mse-soft:  #fce4ec;  --mse-line: #e58aae;
+    --pen:      #2e7d32;  --pen-soft:  #e8f5e9;  --pen-line: #86c48a;
+
+    --fit:      #1e40af;  /* the fitted curve (blue, as on the slide)  */
+    --truth:    #9aa5b8;  /* the underlying truth (grey dashed)        */
+    --pt:       #a62b1f;  /* data points (dark red crosses, per slide) */
+    --test:     #b45309;  /* test-error curve (amber)                  */
+
+    --radius: 14px;
+    --shadow: 0 6px 20px rgba(40,70,120,.08);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --math: "STIX Two Math", "Cambria Math", "Latin Modern Math", "Times New Roman", Georgia, serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1100px 520px at 82% -10%, #e9f0fb 0%, transparent 60%),
+      radial-gradient(900px 460px at -8% 6%, #fdf0f5 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.55;
+  }
+  .wrap{ max-width: 1140px; margin: 0 auto; padding: 26px 20px 60px; }
+
+  /* ---------------------------- math rendering ---------------------------- */
+  math{ font-family: var(--math); }
+
+  /* ------------------------------- header -------------------------------- */
+  .hero{ text-align:center; margin: 26px 0 18px; }
+  .hero h1{ font-size: 1.6rem; margin: 0 0 8px; letter-spacing:-.3px; }
+  .hero p{ color: var(--text-dim); max-width: 820px; margin: 0 auto; font-size:.95rem; }
+
+  /* ------------------------------ equation ------------------------------- */
+  .eqbox{
+    background: var(--panel); border:1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px 20px 12px; margin: 18px 0 16px; text-align:center;
+  }
+  .eqbox math{ font-size: 1.5rem; }
+  /* The two halves of the cost, tinted to match the panels below. */
+  .m-mse{ color: var(--mse); }
+  .m-pen{ color: var(--pen); }
+  .eq-key{
+    display:flex; gap:18px; justify-content:center; flex-wrap:wrap;
+    margin-top:10px; font-size:.85rem; color:var(--text-dim);
+  }
+  .eq-key b{ font-weight:700; }
+  .eq-key .sw{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px;
+               vertical-align:-1px; }
+  .eq-note{
+    margin-top:9px; font-size:.8rem; color:var(--text-dim); font-style:italic;
+    border-top:1px dashed var(--line); padding-top:8px;
+  }
+
+  /* ----------------------------- lambda control -------------------------- */
+  .control{
+    background: var(--panel); border:1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px 22px 18px; margin-bottom: 16px;
+  }
+  .control-top{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px; }
+  .control-top .lbl{ font-size:.78rem; font-weight:700; color:var(--text-dim);
+                     text-transform:uppercase; letter-spacing:.6px; }
+  .lam-val{ font-family:var(--math); font-size:1.35rem; font-weight:600; color:var(--accent); }
+  .lam-tag{ font-size:.82rem; font-weight:700; padding:3px 11px; border-radius:999px; }
+  .lam-tag.over { background:#fdecea; color:#a62b1f; border:1px solid #f0b3aa; }
+  .lam-tag.good { background:#e8f5e9; color:#1b5e20; border:1px solid #9ad9a0; }
+  .lam-tag.under{ background:#eef2f7; color:#4a5568; border:1px solid #cbd5e1; }
+
+  input[type=range]{
+    width:100%; margin:10px 0 4px; accent-color: var(--accent); height:22px; cursor:pointer;
+  }
+  .ticks{ display:flex; justify-content:space-between; font-size:.72rem; color:var(--text-dim);
+          font-family:var(--math); }
+
+  .ctl-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px; }
+  .btn{
+    padding:7px 14px; border-radius:999px; border:1.5px solid var(--line); background:var(--panel);
+    color:var(--text); font:600 .84rem var(--font); cursor:pointer;
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .btn:hover{ border-color:var(--accent); color:var(--accent); }
+  .btn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.ghost{ font-weight:600; }
+
+  /* ------------------------------- panels -------------------------------- */
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
+
+  .panel{
+    background: var(--panel); border:1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px 18px 14px; min-width:0;
+  }
+  .panel h2{
+    margin:0 0 2px; font-size:1.02rem; display:flex; align-items:center; gap:8px;
+  }
+  .panel h2 .step{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:22px; height:22px; border-radius:50%; background:var(--bg-soft);
+    color:var(--accent); font-size:.78rem; font-weight:800; flex:none;
+  }
+  .panel .sub{ margin:0 0 10px; font-size:.83rem; color:var(--text-dim); }
+  .panel svg{ display:block; width:100%; height:auto; overflow:visible; }
+
+  /* live narration under the fit */
+  .narrate{
+    margin-top:10px; padding:10px 12px; border-radius:10px; font-size:.87rem;
+    background:var(--panel-2); border:1px solid var(--line); border-left:4px solid var(--accent);
+    min-height:3.1em;
+  }
+  .narrate b{ font-weight:700; }
+
+  /* readouts */
+  .readout{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:.83rem; }
+  .readout .item{ display:flex; align-items:baseline; gap:6px; }
+  .readout .k{ color:var(--text-dim); }
+  .readout .v{ font-family:var(--math); font-weight:600; font-size:1rem; }
+
+  .hint{ font-size:.78rem; color:var(--text-dim); font-style:italic; margin-top:8px; }
+
+  .fixednote{
+    margin-top:10px; font-size:.8rem; color:var(--text-dim);
+    background:var(--bg-soft); border-radius:9px; padding:8px 11px;
+  }
+  .fixednote b{ color:var(--text); }
+
+  footer{ text-align:center; color:var(--text-dim); font-size:.8rem; margin-top:28px; }
+</style>
+</head>
+<body>
+
+<div class="corner-controls">
+  <a href="index.html" class="back-to-index">&larr; Back to index</a>
+  <div class="verify-badge" data-verified="false" data-author="mtgca"></div>
+</div>
+<style>
+.corner-controls{position:fixed;top:10px;right:10px;z-index:9999;
+  display:flex;align-items:center;gap:8px;}
+.back-to-index{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:6px 12px;border-radius:999px;background:#fff;color:#4a5568;
+  border:1px solid #d0d8e8;text-decoration:none;white-space:nowrap;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);transition:border-color .15s ease,color .15s ease;}
+.back-to-index:hover{border-color:#4f7df3;color:#4f7df3;}
+.verify-badge{font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:6px 12px;border-radius:999px;display:flex;align-items:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none;white-space:nowrap;}
+.verify-badge[data-verified="true"]{background:#e6f9f1;color:#1a7a4a;border:1px solid #9ad9bb;}
+.verify-badge[data-verified="true"]::before{content:"\2713 Expert-verified";}
+.verify-badge[data-verified="false"]{background:#fdf3e7;color:#9a5b00;border:1px solid #f0c088;}
+.verify-badge[data-verified="false"]::before{content:"\26A0 AI-generated \00B7 not expert-verified";}
+.verify-badge[data-author]::after{content:"· by @" attr(data-author);opacity:.75;margin-left:4px;}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <h1>Why does the penalty term help?</h1>
+    <p>The cost <math><mi>J</mi><mo stretchy="false">(</mo><mi>θ</mi><mo stretchy="false">)</mo></math>
+       is made of <b class="m-mse">two competing pieces</b>: how badly we fit the data, and how
+       <b class="m-pen">big the parameters are</b>. Gradient descent minimises their
+       <em>sum</em> — so it must decide what a better fit is <em>worth</em>.
+       <b>λ is the price of coefficient size.</b> Drag it below.</p>
+  </header>
+
+  <!-- ============================ THE EQUATION ============================ -->
+  <div class="eqbox">
+    <math display="block">
+      <mi>J</mi><mo stretchy="false">(</mo><mi>θ</mi><mo stretchy="false">)</mo>
+      <mo>=</mo>
+      <mfrac><mn>1</mn><mrow><mn>2</mn><mi>m</mi></mrow></mfrac>
+      <mrow>
+        <mo>[</mo>
+        <mrow class="m-mse">
+          <munderover>
+            <mo>&#x2211;</mo>
+            <mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow>
+            <mi>m</mi>
+          </munderover>
+          <msup>
+            <mrow>
+              <mo stretchy="false">(</mo>
+              <msub><mi>h</mi><mi>θ</mi></msub>
+              <mo stretchy="false">(</mo><msup><mi>x</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msup><mo stretchy="false">)</mo>
+              <mo>&#x2212;</mo>
+              <msup><mi>y</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msup>
+              <mo stretchy="false">)</mo>
+            </mrow>
+            <mn>2</mn>
+          </msup>
+        </mrow>
+        <mo>+</mo>
+        <mrow class="m-pen">
+          <mi>λ</mi>
+          <munderover>
+            <mo>&#x2211;</mo>
+            <mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow>
+            <mi>n</mi>
+          </munderover>
+          <msubsup><mi>θ</mi><mi>j</mi><mn>2</mn></msubsup>
+        </mrow>
+        <mo>]</mo>
+      </mrow>
+    </math>
+    <div class="eq-key">
+      <span><span class="sw" style="background:var(--mse)"></span><b class="m-mse">Fit term</b> — how wrong the predictions are</span>
+      <span><span class="sw" style="background:var(--pen)"></span><b class="m-pen">Penalty term</b> — the squared L2 norm of the parameters</span>
+    </div>
+    <div class="eq-note">
+      The sum in the penalty starts at <math><mi>j</mi><mo>=</mo><mn>1</mn></math>, not
+      <math><mi>j</mi><mo>=</mo><mn>0</mn></math>: the intercept
+      <math><msub><mi>θ</mi><mn>0</mn></msub></math> is <b>not</b> penalised. Shifting every house
+      price up by $10k is not “complexity”, so we don’t charge for it.
+    </div>
+  </div>
+
+  <!-- ============================ LAMBDA SLIDER =========================== -->
+  <div class="control">
+    <div class="control-top">
+      <span class="lbl">Regularization parameter</span>
+      <span class="lam-val" id="lamVal">λ = 0</span>
+      <span class="lam-tag over" id="lamTag">overfitting</span>
+    </div>
+    <input type="range" id="lam" min="0" max="100" value="0" step="1">
+    <div class="ticks">
+      <span>λ = 0</span><span>10⁻⁴</span><span>10⁻²</span><span>1</span><span>10²</span>
+    </div>
+    <div class="ctl-row">
+      <button class="btn" id="btnTerms">Show the individual terms</button>
+      <button class="btn" id="btnDrop">Remove one data point</button>
+      <button class="btn ghost" id="btnShuffle">New noise sample</button>
+    </div>
+    <div class="fixednote">
+      <b>The model never changes.</b> It is a degree-9 polynomial at every setting of λ —
+      we are not deleting terms, only changing what we are willing to <em>pay</em> for their
+      coefficients.
+    </div>
+  </div>
+
+  <!-- =============================== PANELS =============================== -->
+  <div class="grid">
+
+    <!-- A. THE FIT -->
+    <section class="panel">
+      <h2><span class="step">A</span> The fit</h2>
+      <p class="sub">A degree-9 model on 11 noisy house prices.</p>
+      <svg id="svgFit" viewBox="0 0 520 340" role="img" aria-label="Fitted curve over training data"></svg>
+      <div class="narrate" id="narrate"></div>
+    </section>
+
+    <!-- B. THE COEFFICIENTS -->
+    <section class="panel">
+      <h2><span class="step">B</span> The coefficients</h2>
+      <p class="sub">Same nine terms, always. Watch the high powers die first.</p>
+      <svg id="svgTheta" viewBox="0 0 520 340" role="img" aria-label="Bar chart of the fitted coefficients"></svg>
+      <div class="readout">
+        <div class="item"><span class="k">largest |θ|</span><span class="v" id="maxTheta">—</span></div>
+        <div class="item"><span class="k">Σθ<sub>j</sub>² =</span><span class="v m-pen" id="normTheta">—</span></div>
+      </div>
+      <div class="hint">Bars are drawn on a signed log scale — the raw values at λ = 0 are far
+        too large to show next to the small ones.</div>
+    </section>
+
+    <!-- C. THE TUG OF WAR -->
+    <section class="panel">
+      <h2><span class="step">C</span> The receipt</h2>
+      <p class="sub">What the optimizer spent, split into the two halves of <math><mi>J</mi></math>.</p>
+      <svg id="svgCost" viewBox="0 0 520 250" role="img" aria-label="Stacked bar of the two cost terms"></svg>
+      <div class="readout">
+        <div class="item"><span class="k">fit part</span><span class="v m-mse" id="cMse">—</span></div>
+        <div class="item"><span class="k">penalty part</span><span class="v m-pen" id="cPen">—</span></div>
+        <div class="item"><span class="k">total <math><mi>J</mi></math></span><span class="v" id="cTot">—</span></div>
+      </div>
+      <div class="hint">Cheap λ → the optimizer buys all the wiggle it wants.
+        Expensive λ → it cannot afford to bend at all.</div>
+    </section>
+
+    <!-- D. GENERALIZATION -->
+    <section class="panel">
+      <h2><span class="step">D</span> Does it generalise?</h2>
+      <p class="sub">Error on the training points vs. on data the model never saw.</p>
+      <svg id="svgErr" viewBox="0 0 520 300" role="img" aria-label="Train and test error against lambda"></svg>
+      <div class="readout">
+        <div class="item"><span class="k">train</span><span class="v" id="eTrain" style="color:var(--fit)">—</span></div>
+        <div class="item"><span class="k">test</span><span class="v" id="eTest" style="color:var(--test)">—</span></div>
+        <div class="item"><span class="k">best λ here</span><span class="v" id="eBest">—</span></div>
+      </div>
+      <div class="hint">Press <b>New noise sample</b> a few times: the best λ moves. There is no
+        magic number to memorise.</div>
+    </section>
+
+  </div>
+
+  <footer>
+    Fitting the training data better is not the goal. Predicting <em>new</em> data well is.
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+/* ===========================================================================
+   MATH / FIT CORE
+   The ridge solution is computed here and never displayed. Students see only
+   the result move. No matrix notation appears anywhere in the UI.
+   =========================================================================== */
+
+const DEGREE  = 9;      // fixed on purpose — see the "model never changes" note
+const N_TRAIN = 11;
+const N_TEST  = 60;
+const NOISE   = 0.075;
+
+/* The underlying truth: a smooth saturating price curve on x in [0,1].
+   Deliberately NOT a polynomial the model can nail exactly. */
+function TRUTH(x){ return 0.15 + 0.78 * (1 - Math.exp(-3.1 * x)); }
+
+/* --- tiny linear algebra (private to this file) --------------------------- */
+function solve(A, b){
+  // Gaussian elimination with partial pivoting. n is small (10), so this is
+  // instant and plenty accurate for a teaching widget.
+  const n = b.length;
+  const M = A.map((row, i) => row.slice().concat(b[i]));
+  for (let c = 0; c < n; c++){
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-13) continue;          // singular-ish, skip
+    [M[c], M[p]] = [M[p], M[c]];
+    for (let r = 0; r < n; r++){
+      if (r === c) continue;
+      const f = M[r][c] / M[c][c];
+      if (!f) continue;
+      for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+    }
+  }
+  return M.map((row, i) => Math.abs(row[i]) < 1e-13 ? 0 : row[n] / row[i]);
+}
+
+/* Design row [1, x, x^2, ...] for one point. */
+function feats(x){
+  const r = new Array(DEGREE + 1);
+  r[0] = 1;
+  for (let j = 1; j <= DEGREE; j++) r[j] = r[j - 1] * x;
+  return r;
+}
+
+/* Ridge fit. The intercept column is NOT penalised, matching the j=1 lower
+   limit in the equation on screen. */
+function fit(xs, ys, lam){
+  const p = DEGREE + 1, m = xs.length;
+  const A = Array.from({length: p}, () => new Array(p).fill(0));
+  const b = new Array(p).fill(0);
+  for (let i = 0; i < m; i++){
+    const f = feats(xs[i]);
+    for (let a = 0; a < p; a++){
+      b[a] += f[a] * ys[i];
+      for (let c = 0; c < p; c++) A[a][c] += f[a] * f[c];
+    }
+  }
+  for (let j = 1; j < p; j++) A[j][j] += lam;   // j starts at 1: skip intercept
+  return solve(A, b);
+}
+
+function predict(th, x){
+  let s = 0, pw = 1;
+  for (let j = 0; j < th.length; j++){ s += th[j] * pw; pw *= x; }
+  return s;
+}
+
+function mseOf(th, xs, ys){
+  let s = 0;
+  for (let i = 0; i < xs.length; i++){ const d = predict(th, xs[i]) - ys[i]; s += d * d; }
+  return s / xs.length;
+}
+
+function sqNorm(th){            // sum of theta_j^2 for j >= 1
+  let s = 0;
+  for (let j = 1; j < th.length; j++) s += th[j] * th[j];
+  return s;
+}
+
+/* ===========================================================================
+   DATA
+   =========================================================================== */
+let rngState = 12345;
+function rnd(){                                  // deterministic LCG, so a
+  rngState = (rngState * 1664525 + 1013904223) >>> 0;   // reshuffle is reproducible
+  return rngState / 4294967296;
+}
+function gauss(){
+  let u = 0, v = 0;
+  while (u === 0) u = rnd();
+  while (v === 0) v = rnd();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+let TRX = [], TRY = [], TEX = [], TEY = [];
+function makeData(){
+  TRX = []; TRY = [];
+  for (let i = 0; i < N_TRAIN; i++){
+    const x = i / (N_TRAIN - 1);
+    TRX.push(x);
+    TRY.push(TRUTH(x) + gauss() * NOISE);
+  }
+  TEX = []; TEY = [];
+  for (let i = 0; i < N_TEST; i++){
+    const x = (i + 0.5) / N_TEST;
+    TEX.push(x);
+    TEY.push(TRUTH(x) + gauss() * NOISE);
+  }
+}
+makeData();
+
+/* ===========================================================================
+   LAMBDA SCALE
+   Slider 0..100 maps to lambda 0, then 1e-6 .. 1e2 logarithmically. Position 0
+   is exactly zero so the widget can open genuinely unregularised.
+   =========================================================================== */
+function sliderToLambda(s){
+  if (s <= 0) return 0;
+  const t = (s - 1) / 99;                       // 0..1
+  return Math.pow(10, -6 + t * 8);              // 1e-6 .. 1e2
+}
+function fmtLambda(l){
+  if (l === 0) return "λ = 0";
+  if (l >= 0.01 && l < 1000) return "λ = " + (l < 1 ? l.toFixed(l < 0.1 ? 4 : 3) : l.toFixed(2));
+  const e = Math.floor(Math.log10(l));
+  const mant = (l / Math.pow(10, e)).toFixed(1);
+  return "λ = " + mant + "×10" + supDigits(e);
+}
+function supDigits(e){
+  const map = {"-":"⁻","0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹"};
+  return String(e).split("").map(c => map[c] || c).join("");
+}
+function fmt(v, digits){
+  if (!isFinite(v)) return "—";
+  const a = Math.abs(v);
+  if (a === 0) return "0";
+  if (a >= 1e5 || a < 1e-4){
+    const e = Math.floor(Math.log10(a));
+    return (v / Math.pow(10, e)).toFixed(1) + "×10" + supDigits(e);
+  }
+  return v.toFixed(digits != null ? digits : (a < 1 ? 4 : a < 100 ? 2 : 1));
+}
+
+/* ===========================================================================
+   SVG HELPERS
+   NOTE: MathML cannot go inside <svg>. Math labels are built from <tspan>
+   with an italic math font instead — this is the only place where
+   MathML-free math rendering is acceptable.
+   =========================================================================== */
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(name, attrs){
+  const n = document.createElementNS(SVGNS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+/* Italic identifier with an optional subscript, e.g. theta_3. */
+function svgSub(x, y, base, sub, opt){
+  const o = opt || {};
+  const t = el("text", {
+    x: x, y: y,
+    "font-family": "var(--math)", "font-style": "italic",
+    "font-size": o.size || 13, fill: o.fill || "#64708a",
+    "text-anchor": o.anchor || "middle"
+  });
+  t.appendChild(document.createTextNode(base));
+  if (sub != null){
+    const s = el("tspan", {
+      dy: 4, "font-size": (o.size || 13) * 0.72,
+      "font-style": /^[0-9]+$/.test(String(sub)) ? "normal" : "italic"
+    });
+    s.textContent = sub;
+    t.appendChild(s);
+  }
+  return t;
+}
+function label(x, y, str, opt){
+  const o = opt || {};
+  const t = el("text", {
+    x: x, y: y, "font-size": o.size || 12,
+    fill: o.fill || "#64708a", "text-anchor": o.anchor || "middle",
+    "font-family": "var(--font)", "font-weight": o.weight || 400
+  });
+  t.textContent = str;
+  return t;
+}
+function clear(svg){ while (svg.firstChild) svg.removeChild(svg.firstChild); }
+
+/* ===========================================================================
+   STATE
+   =========================================================================== */
+let showTerms = false;
+let dropOne   = false;   // leave-one-out: makes VARIANCE visible
+
+const $ = id => document.getElementById(id);
+
+/* ===========================================================================
+   PANEL A — THE FIT
+   =========================================================================== */
+function drawFit(th, xs, ys){
+  const svg = $("svgFit");
+  clear(svg);
+  const L = 46, R = 505, T = 14, B = 292;
+  const X  = x => L + x * (R - L);
+  const Y  = y => B - ((y - (-0.15)) / (1.25 - (-0.15))) * (B - T);
+
+  // axes
+  svg.appendChild(el("line", {x1:L, y1:B, x2:R, y2:B, stroke:"#98a2b3", "stroke-width":1.5}));
+  svg.appendChild(el("line", {x1:L, y1:T, x2:L, y2:B, stroke:"#98a2b3", "stroke-width":1.5}));
+  svg.appendChild(label((L + R) / 2, 322, "Size of house", {size:13, weight:600, fill:"#4a5568"}));
+  const yl = label(0, 0, "Price", {size:13, weight:600, fill:"#4a5568"});
+  yl.setAttribute("transform", `translate(16,${(T + B) / 2}) rotate(-90)`);
+  svg.appendChild(yl);
+
+  // the truth, faint and dashed
+  let d = "";
+  for (let i = 0; i <= 200; i++){
+    const x = i / 200;
+    d += (i ? "L" : "M") + X(x).toFixed(2) + "," + Y(TRUTH(x)).toFixed(2);
+  }
+  svg.appendChild(el("path", {d, fill:"none", stroke:"var(--truth)", "stroke-width":2,
+                              "stroke-dasharray":"6 5"}));
+
+  // individual terms theta_j * x^j, faint, behind the total
+  if (showTerms){
+    for (let j = 1; j <= DEGREE; j++){
+      let p = "";
+      for (let i = 0; i <= 160; i++){
+        const x = i / 160;
+        const v = th[j] * Math.pow(x, j);
+        const yy = Math.max(-0.6, Math.min(1.7, v));   // clamp for drawing
+        p += (i ? "L" : "M") + X(x).toFixed(2) + "," + Y(yy).toFixed(2);
+      }
+      svg.appendChild(el("path", {d:p, fill:"none", stroke:"#94a3b8",
+                                  "stroke-width":1, opacity:0.55}));
+    }
+  }
+
+  // the fitted curve, clipped to the visible band
+  let p = "", pen = false;
+  for (let i = 0; i <= 400; i++){
+    const x = i / 400;
+    const v = predict(th, x);
+    if (v < -0.4 || v > 1.5){ pen = false; continue; }   // lift the pen off-scale
+    p += (pen ? "L" : "M") + X(x).toFixed(2) + "," + Y(v).toFixed(2);
+    pen = true;
+  }
+  svg.appendChild(el("path", {d:p, fill:"none", stroke:"var(--fit)", "stroke-width":2.8,
+                              "stroke-linejoin":"round", "stroke-linecap":"round"}));
+
+  // training points as crosses (matching the lecture slide)
+  for (let i = 0; i < xs.length; i++){
+    const cx = X(xs[i]), cy = Y(ys[i]), r = 6;
+    const g = el("g", {stroke:"var(--pt)", "stroke-width":3, "stroke-linecap":"round"});
+    g.appendChild(el("line", {x1:cx-r, y1:cy-r, x2:cx+r, y2:cy+r}));
+    g.appendChild(el("line", {x1:cx-r, y1:cy+r, x2:cx+r, y2:cy-r}));
+    svg.appendChild(g);
+  }
+
+  // the dropped point, hollow, so the student can see what was removed
+  if (dropOne){
+    const di = droppedIndex();
+    const cx = X(FULLX[di]), cy = Y(FULLY[di]);
+    svg.appendChild(el("circle", {cx, cy, r:8, fill:"none", stroke:"#a62b1f",
+                                  "stroke-width":2, "stroke-dasharray":"3 3", opacity:.75}));
+  }
+
+  // legend
+  const lg = el("g", {});
+  lg.appendChild(el("line", {x1:R-146, y1:T+8, x2:R-122, y2:T+8,
+                             stroke:"var(--truth)", "stroke-width":2, "stroke-dasharray":"6 5"}));
+  lg.appendChild(label(R-118, T+12, "true relationship", {size:11, anchor:"start"}));
+  lg.appendChild(el("line", {x1:R-146, y1:T+26, x2:R-122, y2:T+26,
+                             stroke:"var(--fit)", "stroke-width":2.8}));
+  lg.appendChild(label(R-118, T+30, "fitted model", {size:11, anchor:"start"}));
+  svg.appendChild(lg);
+}
+
+/* ===========================================================================
+   PANEL B — THE COEFFICIENTS
+   Signed log scale: at lambda=0 some coefficients are ~1e5 while others are
+   ~1, and a linear axis would render all but one bar invisible.
+   =========================================================================== */
+function drawTheta(th){
+  const svg = $("svgTheta");
+  clear(svg);
+  const L = 40, R = 505, T = 16, B = 280;
+  const mid = (T + B) / 2;
+  const MAXD = 6;                                  // decades shown either way
+  const dec = v => {
+    const a = Math.abs(v);
+    if (a < 1) return 0;
+    return Math.min(MAXD, Math.log10(a) + 1);
+  };
+  const H = (B - mid) / MAXD;
+
+  // zero line + decade gridlines
+  for (let k = 1; k <= MAXD; k++){
+    for (const s of [-1, 1]){
+      svg.appendChild(el("line", {x1:L, y1:mid - s*k*H, x2:R, y2:mid - s*k*H,
+                                  stroke:"#eef2f7", "stroke-width":1}));
+    }
+  }
+  svg.appendChild(el("line", {x1:L, y1:mid, x2:R, y2:mid, stroke:"#98a2b3", "stroke-width":1.5}));
+  svg.appendChild(label(L-6, mid+4, "0", {size:11, anchor:"end"}));
+  svg.appendChild(label(L-6, mid - 3*H + 4, "10³", {size:10, anchor:"end"}));
+  svg.appendChild(label(L-6, mid + 3*H + 4, "−10³", {size:10, anchor:"end"}));
+
+  const n = th.length;
+  const slot = (R - L) / n;
+  const bw = Math.min(30, slot * 0.56);
+
+  for (let j = 0; j < n; j++){
+    const cx = L + slot * (j + 0.5);
+    const h  = dec(th[j]) * H;
+    const up = th[j] >= 0;
+    const y  = up ? mid - h : mid;
+    // theta_0 is not penalised — draw it in a neutral tone to reinforce that
+    const fill = j === 0 ? "#cbd5e1" : "var(--pen)";
+    if (h > 0.4){
+      svg.appendChild(el("rect", {x:cx - bw/2, y:y, width:bw, height:Math.max(h, 1),
+                                  rx:3, fill:fill, opacity: j === 0 ? .85 : .82}));
+    } else {
+      // essentially dead: a flat tick, so "gone" still reads as a bar position
+      svg.appendChild(el("rect", {x:cx - bw/2, y:mid - 1.5, width:bw, height:3,
+                                  rx:1.5, fill:"#cbd5e1"}));
+    }
+    svg.appendChild(svgSub(cx, B + 20, "θ", j, {size:13, fill:"#4a5568"}));
+    // value on top of tall bars
+    if (h > 26){
+      svg.appendChild(label(cx, up ? y - 5 : y + h + 12, fmt(th[j], 0),
+                            {size:9.5, fill:"#4a5568", weight:600}));
+    }
+  }
+
+  svg.appendChild(label(L, T + 4, "intercept not penalised →", {size:10, anchor:"start", fill:"#94a3b8"}));
+  svg.appendChild(label((L + R) / 2, B + 44, "the degree is always 9 — only the sizes change",
+                        {size:11.5, weight:600, fill:"#64708a"}));
+}
+
+/* ===========================================================================
+   PANEL C — THE RECEIPT (stacked cost bar)
+   =========================================================================== */
+function drawCost(th, xs, ys, lam){
+  const svg = $("svgCost");
+  clear(svg);
+  const L = 100, R = 500, T = 30, B = 210;
+
+  const m   = xs.length;
+  const fitPart = mseOf(th, xs, ys) * m / (2 * m);      // (1/2m) * sum sq err
+  const penPart = lam * sqNorm(th) / (2 * m);
+  const total   = fitPart + penPart;
+
+  // Log-ish width scale: the two parts span many orders of magnitude across
+  // the lambda range, so a linear bar would be unreadable at both ends.
+  const w = v => {
+    if (v <= 0) return 0;
+    const t = (Math.log10(v) + 7) / 8;                  // 1e-7 .. 1e1 -> 0..1
+    return Math.max(0, Math.min(1, t)) * (R - L);
+  };
+
+  const rows = [
+    {k:"fit term",     v:fitPart, c:"var(--mse)", s:"var(--mse-soft)"},
+    {k:"penalty term", v:penPart, c:"var(--pen)", s:"var(--pen-soft)"},
+    {k:"total J",      v:total,   c:"#475569",    s:"#eef2f7"}
+  ];
+
+  rows.forEach((r, i) => {
+    const y = T + i * 58;
+    svg.appendChild(el("rect", {x:L, y:y, width:R-L, height:34, rx:6, fill:r.s}));
+    const ww = w(r.v);
+    if (ww > 1) svg.appendChild(el("rect", {x:L, y:y, width:ww, height:34, rx:6, fill:r.c, opacity:.85}));
+    svg.appendChild(label(L - 10, y + 22, r.k, {size:12.5, anchor:"end", weight:600, fill:"#4a5568"}));
+    svg.appendChild(label(L + Math.max(ww, 6) + 8, y + 22, fmt(r.v),
+                          {size:12, anchor:"start", weight:700, fill:r.c}));
+  });
+
+  svg.appendChild(label(L, B + 22, "bar length is logarithmic",
+                        {size:10.5, anchor:"start", fill:"#94a3b8"}));
+  return {fitPart, penPart, total};
+}
+
+/* ===========================================================================
+   PANEL D — TRAIN vs TEST ERROR
+   =========================================================================== */
+let errCurve = null;    // recomputed only when the data changes
+function computeErrCurve(xs, ys){
+  const pts = [];
+  for (let s = 0; s <= 100; s++){
+    const lam = sliderToLambda(s);
+    const th  = fit(xs, ys, lam);
+    pts.push({s, lam, tr:mseOf(th, xs, ys), te:mseOf(th, TEX, TEY)});
+  }
+  return pts;
+}
+
+function drawErr(curSlider){
+  const svg = $("svgErr");
+  clear(svg);
+  const L = 52, R = 505, T = 18, B = 246;
+
+  const lo = -5, hi = 1;                       // log10 of plotted error range
+  const X = s => L + (s / 100) * (R - L);
+  const Y = v => {
+    const t = (Math.log10(Math.max(v, 1e-9)) - lo) / (hi - lo);
+    return B - Math.max(0, Math.min(1, t)) * (B - T);
+  };
+
+  // gridlines
+  for (let k = lo; k <= hi; k++){
+    const y = Y(Math.pow(10, k));
+    svg.appendChild(el("line", {x1:L, y1:y, x2:R, y2:y, stroke:"#eef2f7", "stroke-width":1}));
+    svg.appendChild(label(L - 7, y + 4, "10" + supDigits(k), {size:10, anchor:"end"}));
+  }
+  svg.appendChild(el("line", {x1:L, y1:B, x2:R, y2:B, stroke:"#98a2b3", "stroke-width":1.5}));
+  svg.appendChild(el("line", {x1:L, y1:T, x2:L, y2:B, stroke:"#98a2b3", "stroke-width":1.5}));
+
+  const mkPath = key => {
+    let d = "";
+    errCurve.forEach((p, i) => { d += (i ? "L" : "M") + X(p.s).toFixed(2) + "," + Y(p[key]).toFixed(2); });
+    return d;
+  };
+  svg.appendChild(el("path", {d:mkPath("tr"), fill:"none", stroke:"var(--fit)", "stroke-width":2.4}));
+  svg.appendChild(el("path", {d:mkPath("te"), fill:"none", stroke:"var(--test)", "stroke-width":2.4}));
+
+  // best lambda by test error
+  let best = errCurve[0];
+  for (const p of errCurve) if (p.te < best.te) best = p;
+  svg.appendChild(el("line", {x1:X(best.s), y1:T, x2:X(best.s), y2:B,
+                              stroke:"var(--test)", "stroke-width":1.2,
+                              "stroke-dasharray":"4 4", opacity:.6}));
+  svg.appendChild(label(X(best.s), T + 10, "best λ", {size:10.5, fill:"var(--test)", weight:700}));
+
+  // current position
+  const cur = errCurve[curSlider];
+  svg.appendChild(el("line", {x1:X(cur.s), y1:T, x2:X(cur.s), y2:B,
+                              stroke:"var(--accent)", "stroke-width":1.6, opacity:.75}));
+  svg.appendChild(el("circle", {cx:X(cur.s), cy:Y(cur.tr), r:4.5, fill:"var(--fit)"}));
+  svg.appendChild(el("circle", {cx:X(cur.s), cy:Y(cur.te), r:4.5, fill:"var(--test)"}));
+
+  // axis labels
+  svg.appendChild(label(L, B + 20, "λ = 0", {size:11, anchor:"start"}));
+  svg.appendChild(label(R, B + 20, "λ large", {size:11, anchor:"end"}));
+  svg.appendChild(label((L + R) / 2, B + 20, "more regularization →", {size:11, weight:600}));
+
+  // legend
+  svg.appendChild(el("line", {x1:R-128, y1:T+6, x2:R-104, y2:T+6, stroke:"var(--fit)", "stroke-width":2.4}));
+  svg.appendChild(label(R-100, T+10, "training error", {size:11, anchor:"start"}));
+  svg.appendChild(el("line", {x1:R-128, y1:T+24, x2:R-104, y2:T+24, stroke:"var(--test)", "stroke-width":2.4}));
+  svg.appendChild(label(R-100, T+28, "test error", {size:11, anchor:"start"}));
+
+  return {cur, best};
+}
+
+/* ===========================================================================
+   NARRATION — one sentence that rewrites itself as lambda moves
+   =========================================================================== */
+function narrate(lam, th, tr, te, best){
+  const n2 = sqNorm(th);
+  const big = th.reduce((a, v, j) => j === 0 ? a : Math.max(a, Math.abs(v)), 0);
+  let bigJ = 0;
+  th.forEach((v, j) => { if (j > 0 && Math.abs(v) === big) bigJ = j; });
+
+  if (lam === 0 || n2 > 5e3){
+    return `<b>No penalty at all.</b> The curve threads its way through every point — training
+            error is almost zero — but θ<sub>${bigJ}</sub> is ${fmt(big, 0)}. It is fitting the
+            <em>noise</em>, and the wiggle is bought with enormous coefficients that nearly cancel
+            each other out.`;
+  }
+  if (n2 > 30){
+    return `<b>Still very flexible.</b> The coefficients are large enough to keep bending the curve
+            toward individual points. Training error is tiny, but the test error is worse than it
+            needs to be.`;
+  }
+  if (te <= best.te * 1.35){
+    return `<b>A good balance.</b> Training error is slightly <em>worse</em> than at λ = 0 — and
+            that is fine. The high-power terms have been priced out, the curve is smooth, and error
+            on unseen data is near its minimum.`;
+  }
+  if (n2 > 0.05){
+    return `<b>Getting expensive.</b> Coefficients are being squeezed hard; the model can barely
+            bend. It is starting to miss the real shape of the data — underfitting.`;
+  }
+  return `<b>Far too expensive.</b> Σθ<sub>j</sub>² ≈ ${fmt(n2)} — every coefficient has been
+          crushed to nearly zero. The model cannot afford to bend at all, so it collapses to a
+          flat line through the average price. Both extremes fail; λ trades one failure for the other.`;
+}
+
+/* ===========================================================================
+   MAIN UPDATE
+   =========================================================================== */
+let FULLX = [], FULLY = [];
+function droppedIndex(){ return Math.floor(N_TRAIN / 2) - 1; }   // a mid-range point
+
+function activeData(){
+  if (!dropOne) return {xs:FULLX, ys:FULLY};
+  const di = droppedIndex();
+  return {
+    xs: FULLX.filter((_, i) => i !== di),
+    ys: FULLY.filter((_, i) => i !== di)
+  };
+}
+
+function refreshData(){
+  makeData();
+  FULLX = TRX.slice(); FULLY = TRY.slice();
+  rebuildCurve();
+}
+function rebuildCurve(){
+  const {xs, ys} = activeData();
+  errCurve = computeErrCurve(xs, ys);
+}
+
+function update(){
+  const s   = +$("lam").value;
+  const lam = sliderToLambda(s);
+  const {xs, ys} = activeData();
+  const th  = fit(xs, ys, lam);
+
+  $("lamVal").textContent = fmtLambda(lam);
+
+  drawFit(th, xs, ys);
+  drawTheta(th);
+  const c = drawCost(th, xs, ys, lam);
+  const e = drawErr(s);
+
+  // readouts
+  const big = th.reduce((a, v, j) => j === 0 ? a : Math.max(a, Math.abs(v)), 0);
+  $("maxTheta").textContent  = fmt(big, 1);
+  $("normTheta").textContent = fmt(sqNorm(th));
+  $("cMse").textContent = fmt(c.fitPart);
+  $("cPen").textContent = fmt(c.penPart);
+  $("cTot").textContent = fmt(c.total);
+  $("eTrain").textContent = fmt(e.cur.tr);
+  $("eTest").textContent  = fmt(e.cur.te);
+  $("eBest").textContent  = fmtLambda(e.best.lam).replace("λ = ", "");
+
+  // regime tag
+  const tag = $("lamTag");
+  const n2  = sqNorm(th);
+  if (n2 > 30){ tag.className = "lam-tag over";  tag.textContent = "overfitting"; }
+  else if (e.cur.te <= e.best.te * 1.35){ tag.className = "lam-tag good"; tag.textContent = "well balanced"; }
+  else { tag.className = "lam-tag under"; tag.textContent = "underfitting"; }
+
+  $("narrate").innerHTML = narrate(lam, th, e.cur.tr, e.cur.te, e.best);
+}
+
+/* ===========================================================================
+   WIRING
+   =========================================================================== */
+$("lam").addEventListener("input", update);
+
+$("btnTerms").addEventListener("click", e => {
+  showTerms = !showTerms;
+  e.currentTarget.classList.toggle("on", showTerms);
+  e.currentTarget.textContent = showTerms ? "Hide the individual terms" : "Show the individual terms";
+  update();
+});
+
+$("btnDrop").addEventListener("click", e => {
+  dropOne = !dropOne;
+  e.currentTarget.classList.toggle("on", dropOne);
+  e.currentTarget.textContent = dropOne ? "Put the point back" : "Remove one data point";
+  rebuildCurve();
+  update();
+});
+
+$("btnShuffle").addEventListener("click", () => {
+  rngState = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+  refreshData();
+  update();
+});
+
+refreshData();
+update();
+</script>
+</body>
+</html>
